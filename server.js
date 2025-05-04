@@ -6,6 +6,7 @@ require('dotenv').config();
 const retailerRoutes = require('./routes/retailer.routes');
 const productRoutes = require('./routes/product.routes');
 const saleRoutes = require('./routes/sale.routes');
+const salesmanRoutes = require('./routes/salesman.routes');
 
 const app = express();
 
@@ -35,6 +36,7 @@ mongoose.connection.on('disconnected', () => {
 app.use('/api/retailers', retailerRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/sales', saleRoutes);
+app.use('/api/salesman', salesmanRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
