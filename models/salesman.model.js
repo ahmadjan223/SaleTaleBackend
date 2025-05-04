@@ -32,11 +32,6 @@ const SalesmanSchema = new mongoose.Schema({
   photo: {
     type: String
   },
-  phone: {
-    type: String,
-    required: true,
-    trim: true
-  },
   password: {
     type: String,
     minlength: 6
