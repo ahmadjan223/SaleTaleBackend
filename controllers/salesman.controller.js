@@ -4,8 +4,14 @@ const jwt = require('jsonwebtoken');
 // Create a new salesman
 exports.createSalesman = async (req, res) => {
   try {
-    console.log("::[CREATING SALESMAN] ", req.body);
-    const { name, givenName, familyName, email, password, googleId, photo } = req.body;
+    console.log("::[CREATING SALESMAN] Request Body:", req.body);
+    const { name, givenName, familyName, email, password, googleId, photo, phone } = req.body;
+
+    // Validate required fields
+    if (!phone) {
+      console.error('Phone number is missing in request body');
+      return res.status(400).json({ message: 'Phone number is required' });
+    }
 
     // Check if user already exists
     const existingUser = await Salesman.findOne({ googleId });
@@ -22,10 +28,14 @@ exports.createSalesman = async (req, res) => {
       password,
       googleId,
       photo,
+      phone,
       verified: false
     });
 
+    console.log("::[CREATING SALESMAN] Salesman object:", salesman);
+
     await salesman.save();
+    console.log("::[CREATING SALESMAN] Salesman saved successfully");
 
     // Generate JWT token
     const token = jwt.sign(
@@ -45,7 +55,17 @@ exports.createSalesman = async (req, res) => {
       token
     });
   } catch (error) {
-    res.status(500).json({ message: 'Error creating salesman', error: error.message });
+    console.error('Error creating salesman:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      validationErrors: error.errors
+    });
+    res.status(500).json({ 
+      message: 'Error creating salesman', 
+      error: error.message,
+      validationErrors: error.errors
+    });
   }
 };
 

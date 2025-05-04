@@ -11,9 +11,37 @@ const salesmanRoutes = require('./routes/salesman.routes');
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:19006', 'http://localhost:5000', 'http://localhost:3000', 'http://10.7.232.96:5000'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}));
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Welcome route
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Welcome to Salesman App Backend',
+    status: 'running',
+    version: '1.0.0',
+    endpoints: {
+      salesman: '/api/salesman',
+      retailers: '/api/retailers',
+      products: '/api/products',
+      sales: '/api/sales'
+    }
+  });
+});
 
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI;
