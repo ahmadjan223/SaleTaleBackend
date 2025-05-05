@@ -28,3 +28,4 @@ logs
 # Build
 /dist
 /build 
+.vercel
