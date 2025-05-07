@@ -22,7 +22,9 @@ const retailerSchema = new mongoose.Schema({
       type: [Number], // [longitude, latitude]
       required: true
     }
-  },  
+  },
+  addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Salesman', required: true },
+
   createdAt: {
     type: Date,
     default: Date.now

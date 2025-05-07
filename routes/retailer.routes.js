@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const retailerController = require('../controllers/retailer.controller');
+const auth = require('../middleware/auth'); // You'll need to create this middleware
 
-router.post('/', retailerController.createRetailer);
-router.get('/', retailerController.getRetailers);
-router.get('/nearby', retailerController.getRetailersByLocation);
-router.get('/:id', retailerController.getRetailerById);
-router.put('/:id', retailerController.updateRetailer);
-router.delete('/:id', retailerController.deleteRetailer);
+
+router.post('/', auth, retailerController.createRetailer);
+router.get('/', auth, retailerController.getRetailers);
+router.get('/nearby', auth, retailerController.getRetailersByLocation);
+router.get('/:id', auth, retailerController.getRetailerById);
+router.put('/:id', auth, retailerController.updateRetailer);
+router.delete('/:id', auth, retailerController.deleteRetailer);
 
 module.exports = router; 

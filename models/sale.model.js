@@ -19,10 +19,14 @@ const saleSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Salesman', required: true },
+
   createdAt: {
     type: Date,
     default: Date.now
   }
 });
 
-module.exports = mongoose.model('Sale', saleSchema); 
+module.exports = mongoose.model('Sale', saleSchema);
+
+

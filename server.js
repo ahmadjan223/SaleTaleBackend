@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
+console.log('\n>>> server.js started');
+
 const retailerRoutes = require('./routes/retailer.routes');
 const productRoutes = require('./routes/product.routes');
 const saleRoutes = require('./routes/sale.routes');
@@ -47,6 +49,7 @@ app.get('/', (req, res) => {
 const MONGODB_URI = process.env.MONGODB_URI;
 const PORT = process.env.PORT || 5000;
 
+console.log('Connecting to DB...');
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('Successfully connected to MongoDB.'))
   .catch((err) => console.error('MongoDB connection error:', err));
