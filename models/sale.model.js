@@ -19,6 +19,10 @@ const saleSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  coordinates: {
+    type: "Point",
+    coordinates: [longitude, latitude]
+  },
   addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Salesman', required: true },
 
   createdAt: {

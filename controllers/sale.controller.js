@@ -2,11 +2,26 @@ const Sale = require('../models/sale.model');
 
 exports.createSale = async (req, res) => {
   try {
+    const { retailer, product, quantity, amount, coordinates } = req.body;
 
-    const sale = new Sale({ ...req.body, addedBy: req.salesman._id });
+    // Validate coordinates
+    if (!coordinates || !coordinates.coordinates || !Array.isArray(coordinates.coordinates) || coordinates.coordinates.length !== 2) {
+      return res.status(400).json({ 
+        message: 'Invalid coordinates format. Expected format: { type: "Point", coordinates: [longitude, latitude] }' 
+      });
+    }
+
+    const sale = new Sale({ 
+      retailer,
+      product,
+      quantity,
+      amount,
+      coordinates,
+      addedBy: req.salesman._id 
+    });
 
     await sale.save();
-    console.log(`[CREATED SALE] Retailer:${req.body.retailer} by ${req.salesman.email}`)
+    console.log(`[CREATED SALE] Retailer:${req.body.retailer} by ${req.salesman.email} at coordinates: [${coordinates.coordinates}]`);
     res.status(201).json(sale);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -21,10 +36,9 @@ exports.getSales = async (req, res) => {
       .populate('addedBy', 'name email');
 
     console.log('\n::[GET SALES] AddedBy:', req.salesman.email);
-    console.log('\n::[GET SALES] AddedBy:', req.salesman.email);
 
     sales.forEach(sale => {
-      console.log(`[SALE] Retailer: ${sale.retailer?.shopName || sale.retailer}, Product: ${sale.product?.name || sale.product}, Quantity: ${sale.quantity}, Amount: ${sale.amount}`);
+      console.log(`[SALE] Retailer: ${sale.retailer?.shopName || sale.retailer}, Product: ${sale.product?.name || sale.product}, Quantity: ${sale.quantity}, Amount: ${sale.amount}, Coordinates: [${sale.coordinates?.coordinates}]`);
     });
     res.json(sales);
   } catch (error) {
@@ -37,7 +51,7 @@ exports.getRetailerSales = async (req, res) => {
     const sales = await Sale.find({ retailer: req.params.retailerId, addedBy: req.salesman._id })
       .populate('product')
       .populate('addedBy', 'name email');
-    console.log(`[RETAILER SALES] Retailer ID: ${req.params.retailerId}, Product: ${sales.map(s => s.product?.name).join(', ')}, Quantity: ${sales.map(s => s.quantity).join(', ')}, Amount: ${sales.map(s => s.amount).join(', ')}`);
+    console.log(`[RETAILER SALES] Retailer ID: ${req.params.retailerId}, Product: ${sales.map(s => s.product?.name).join(', ')}, Quantity: ${sales.map(s => s.quantity).join(', ')}, Amount: ${sales.map(s => s.amount).join(', ')}, Coordinates: ${sales.map(s => `[${s.coordinates?.coordinates}]`).join(', ')}`);
 
     res.json(sales);
   } catch (error) {
@@ -62,7 +76,7 @@ exports.deleteSale = async (req, res) => {
       return res.status(404).json({ message: 'Sale not found' });
     }
 
-    console.log(`::[DELETED] Sale ID: ${sale._id} @ ${sale.addedBy.email}, Amount: ${sale.amount}, Created by: ${sale.addedBy}, Created: ${sale.createdAt}`);
+    console.log(`::[DELETED] Sale ID: ${sale._id} @ ${sale.addedBy.email}, Amount: ${sale.amount}, Created by: ${sale.addedBy}, Created: ${sale.createdAt}, Coordinates: [${sale.coordinates?.coordinates}]`);
     res.json({ message: 'Sale deleted successfully' });
   } catch (error) {
     console.log('::[ERROR] Delete sale error:', {
@@ -77,6 +91,16 @@ exports.deleteSale = async (req, res) => {
 exports.updateSale = async (req, res) => {
   try {
     console.log('\n::[UPDATE SALE]', req.params.id);
+    
+    // Validate coordinates if provided
+    if (req.body.coordinates) {
+      if (!req.body.coordinates.coordinates || !Array.isArray(req.body.coordinates.coordinates) || req.body.coordinates.coordinates.length !== 2) {
+        return res.status(400).json({ 
+          message: 'Invalid coordinates format. Expected format: { type: "Point", coordinates: [longitude, latitude] }' 
+        });
+      }
+    }
+
     const sale = await Sale.findByIdAndUpdate(
       { _id: req.params.id, addedBy: req.salesman._id },
       req.body,
@@ -88,7 +112,7 @@ exports.updateSale = async (req, res) => {
       return res.status(404).json({ message: 'Sale not found' });
     }
 
-    console.log(`::[UPDATED] Sale ID: ${sale._id}, Amount: ${sale.amount}, Quantity: ${sale.quantity}, Created by: ${sale.addedBy.name}, Created: ${sale.createdAt}`);
+    console.log(`::[UPDATED] Sale ID: ${sale._id}, Amount: ${sale.amount}, Quantity: ${sale.quantity}, Created by: ${sale.addedBy.name}, Created: ${sale.createdAt}, Coordinates: [${sale.coordinates?.coordinates}]`);
     res.json(sale);
   } catch (error) {
     console.log('::[ERROR]', error.message);
