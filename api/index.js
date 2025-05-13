@@ -66,7 +66,7 @@ app.get('/health', (req, res) => {
 
 app.get('/', (req, res) => {
   res.json({
-    message: 'Welcome to Salesman App Backend (Vercel)',
+    message: 'Welcome to Salesman App Backend (Vercel) 14-05-2025',
     status: 'running',
     version: '1.0.0',
     endpoints: {

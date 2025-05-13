@@ -6,6 +6,7 @@ const auth = require('../middleware/auth'); // You'll need to create this middle
 
 router.post('/', auth, retailerController.createRetailer);
 router.get('/', auth, retailerController.getRetailers);
+router.get('/all', retailerController.getAllRetailers);
 router.get('/nearby', auth, retailerController.getRetailersByLocation);
 router.get('/:id', auth, retailerController.getRetailerById);
 router.put('/:id', auth, retailerController.updateRetailer);

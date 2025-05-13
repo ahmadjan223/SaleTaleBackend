@@ -18,6 +18,23 @@ exports.getRetailers = async (req, res) => {
   }
 };
 
+exports.getAllRetailers = async (req, res) => {
+  try {
+    console.log(`\n[GET RETAILERS]`);
+
+    const retailers = await Retailer.find({});
+
+    retailers.forEach(r => {
+      console.log(`[${r.retailerName}, ${r.shopName}, [${r.location.coordinates}]]`);
+    });
+
+    res.json(retailers);
+  } catch (error) {
+    console.log('[ERROR]', error.message);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 exports.createRetailer = async (req, res) => {
   try {
     console.log('\n[CREATE RETAILER]');
