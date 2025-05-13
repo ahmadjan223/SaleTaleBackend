@@ -14,7 +14,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:19006', 'http://localhost:5000', 'http://localhost:3000', `http://${process.env.ip}:5000`],
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
