@@ -20,8 +20,15 @@ const saleSchema = new mongoose.Schema({
     required: true
   },
   coordinates: {
-    type: "Point",
-    coordinates: [longitude, latitude]
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number],
+      required: true
+    }
   },
   addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Salesman', required: true },
 
@@ -30,6 +37,9 @@ const saleSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+// Create a 2dsphere index for geospatial queries
+saleSchema.index({ coordinates: '2dsphere' });
 
 module.exports = mongoose.model('Sale', saleSchema);
 
