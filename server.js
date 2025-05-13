@@ -33,7 +33,7 @@ app.use(express.urlencoded({ extended: true }));
 // Welcome route
 app.get('/', (req, res) => {
   res.json({
-    message: 'Welcome to Salesman App Backend',
+    message: 'Welcome to Salesman App Backend with updated cors',
     status: 'running',
     version: '1.0.0',
     endpoints: {
