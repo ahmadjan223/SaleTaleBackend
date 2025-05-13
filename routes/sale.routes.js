@@ -5,6 +5,7 @@ const auth = require('../middleware/auth');
 
 router.post('/',auth,    saleController.createSale);
 router.get('/',auth, saleController.getSales);
+router.get('/all', saleController.getAllSales);
 router.get('/retailer/:retailerId',auth, saleController.getRetailerSales);
 router.delete('/:id',auth, saleController.deleteSale);
 router.put('/:id',auth, saleController.updateSale);

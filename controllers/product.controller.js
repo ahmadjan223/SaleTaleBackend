@@ -31,6 +31,23 @@ exports.getProducts = async (req, res) => {
   }
 };
 
+exports.getAllProducts = async (req, res) => {
+  try {
+    console.log('[GET ALL PRODUCTS]');
+
+    const products = await Product.find({});
+
+    products.forEach(product => {
+      console.log(`[${product.name}]`);
+    });
+
+    res.json(products);
+  } catch (error) {
+    console.error('Error fetching products:', error.message);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 exports.getProductById = async (req, res) => {
   try {
     console.log('Received request to fetch product with ID:', req.params.id);

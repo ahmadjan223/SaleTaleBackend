@@ -9,6 +9,7 @@ router.post('/login', salesmanController.loginSalesman);
 
 // Protected routes (require authentication)
 router.get('/verified', auth, salesmanController.getVerifiedSalesmen);
+router.get('/all', salesmanController.getAllSalesmen);
 router.get('/unverified', auth, salesmanController.getUnverifiedSalesmen);
 router.put('/verify/:googleId', auth, salesmanController.verifySalesman);
 router.post('/logout', auth, salesmanController.logoutSalesman);

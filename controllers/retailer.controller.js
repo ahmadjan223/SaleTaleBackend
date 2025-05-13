@@ -20,7 +20,7 @@ exports.getRetailers = async (req, res) => {
 
 exports.getAllRetailers = async (req, res) => {
   try {
-    console.log(`\n[GET RETAILERS]`);
+    console.log(`\n[GET ALL RETAILERS]`);
 
     const retailers = await Retailer.find({});
 

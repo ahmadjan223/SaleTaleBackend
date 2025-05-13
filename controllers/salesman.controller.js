@@ -111,6 +111,17 @@ exports.getVerifiedSalesmen = async (req, res) => {
     res.status(500).json({ message: 'Error fetching verified salesmen', error: error.message });
   }
 };
+exports.getAllSalesmen = async (req, res) => {
+  try {
+    const salesmen = await Salesman.find({}).select('-password');
+    salesmen.forEach(salesman => {
+      console.log(`[${salesman.name} ${salesman.email}]`);
+    });
+    res.json(salesmen);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching verified salesmen', error: error.message });
+  }
+};
 
 // Get unverified salesmen
 exports.getUnverifiedSalesmen = async (req, res) => {

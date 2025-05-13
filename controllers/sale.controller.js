@@ -46,6 +46,20 @@ exports.getSales = async (req, res) => {
   }
 };
 
+exports.getAllSales = async (req, res) => {
+  try {
+    const sales = await Sale.find({});
+
+    console.log('\n::[GET ALL SALES]');
+    sales.forEach(sale => {
+      console.log(`[SALE] Retailer: ${sale.retailer?.shopName || sale.retailer}, Product: ${sale.product?.name || sale.product}, Quantity: ${sale.quantity}, Amount: ${sale.amount}, Coordinates: [${sale.coordinates?.coordinates}]`);
+    });
+    res.json(sales);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 exports.getRetailerSales = async (req, res) => {
   try {
     const sales = await Sale.find({ retailer: req.params.retailerId, addedBy: req.salesman._id })
