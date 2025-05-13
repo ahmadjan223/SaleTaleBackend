@@ -114,6 +114,7 @@ exports.getVerifiedSalesmen = async (req, res) => {
 exports.getAllSalesmen = async (req, res) => {
   try {
     const salesmen = await Salesman.find({}).select('-password');
+    console.log('[GET ALL SALESMEN]');
     salesmen.forEach(salesman => {
       console.log(`[${salesman.name} ${salesman.email}]`);
     });
