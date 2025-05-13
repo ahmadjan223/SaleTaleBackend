@@ -82,7 +82,7 @@ app.get('/', (req, res) => {
 app.use('/api/retailers', retailerRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/sales', saleRoutes);
-app.use('/api/salesman', salesmanRoutes);
+app.use('/api/salesmen', salesmanRoutes);
 
 // Wrap MongoDB connection in a try-catch
 try {
