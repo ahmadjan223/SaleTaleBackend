@@ -37,16 +37,8 @@ process.on('unhandledRejection', (err) => {
   console.error('Unhandled Rejection:', err);
   process.exit(1);
 });
-
 app.use(cors({
-  origin: [
-    'http://localhost:19006',
-    'http://localhost:5000',
-    'http://localhost:3000',
-    `http://${process.env.ip}:5000`,
-    'https://*.vercel.app',
-    process.env.FRONTEND_URL
-  ].filter(Boolean),
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
@@ -66,7 +58,7 @@ app.get('/health', (req, res) => {
 
 app.get('/', (req, res) => {
   res.json({
-    message: 'Welcome to Salesman App Backend (Vercel) 14 May 2025',
+    message: 'Welcome to Salesman App Backend (Vercel) 14 May 2025 with cors updated',
     status: 'running',
     version: '1.0.0',
     endpoints: {

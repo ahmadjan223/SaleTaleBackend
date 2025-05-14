@@ -67,7 +67,7 @@ mongoose.connection.on('disconnected', () => {
 app.use('/api/retailers', retailerRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/sales', saleRoutes);
-app.use('/api/salesmen', salesmanRoutes);
+app.use('/api/salesman', salesmanRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
