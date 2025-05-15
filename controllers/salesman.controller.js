@@ -201,4 +201,26 @@ exports.adminDeleteSalesman = async (req, res) => {
     console.log('[ERROR] Admin deleting salesman:', error.message);
     res.status(500).json({ message: error.message });
   }
+};
+
+// Admin Get Salesman By ID
+exports.adminGetSalesmanById = async (req, res) => {
+  try {
+    const salesmanId = req.params.id; // Expecting MongoDB _id
+    console.log(`\n[ADMIN GET SALESMAN BY ID] ID: ${salesmanId}`);
+
+    // Select fields relevant for a tooltip or quick view, e.g., name, email, phone, verified
+    const salesman = await Salesman.findById(salesmanId).select('name email phone verified _id');
+
+    if (!salesman) {
+      console.log('[ERROR] Salesman not found for admin view by ID');
+      return res.status(404).json({ message: 'Salesman not found' });
+    }
+
+    console.log(`[ADMIN] Fetched Salesman: [${salesman.name}, ${salesman.email}]`);
+    res.json(salesman);
+  } catch (error) {
+    console.log('[ERROR] Admin fetching salesman by ID:', error.message);
+    res.status(500).json({ message: error.message });
+  }
 }; 

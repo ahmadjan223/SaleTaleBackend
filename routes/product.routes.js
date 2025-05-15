@@ -13,5 +13,6 @@ router.get('/:id', productController.getProductById);
 // Admin specific routes
 router.get('/admin/all', productController.getAllProducts); // Uses getAllProducts from controller
 router.delete('/admin/:id', productController.adminDeleteProduct);
+router.get('/admin/details/:id', productController.adminGetProductById); // Route for getting specific product details by admin
 
 module.exports = router; 

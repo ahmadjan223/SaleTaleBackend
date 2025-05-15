@@ -198,7 +198,7 @@ exports.adminDeleteRetailer = async (req, res) => {
   }
 };
 
-exports.adminGetRetailer = async (req, res) => {
+exports.adminGetRetailerById = async (req, res) => {
   try {
     console.log('\n[GET RETAILER BY ID]', req.params.id);
 
