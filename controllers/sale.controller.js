@@ -134,6 +134,27 @@ exports.updateSale = async (req, res) => {
   }
 };
 
+// Admin Delete Sale
+exports.adminDeleteSale = async (req, res) => {
+  try {
+    const saleId = req.params.id;
+    console.log(`\n[ADMIN DELETE SALE] ID: ${saleId}`);
+
+    const sale = await Sale.findByIdAndDelete(saleId);
+
+    if (!sale) {
+      console.log('[ERROR] Sale not found for admin deletion');
+      return res.status(404).json({ message: 'Sale not found' });
+    }
+
+    console.log(`[ADMIN] Sale [ID: ${sale._id}] deleted successfully`);
+    res.json({ message: 'Sale deleted successfully by admin' });
+  } catch (error) {
+    console.log('[ERROR] Admin deleting sale:', error.message);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const Salesman = require('../models/salesman.model');
 
 

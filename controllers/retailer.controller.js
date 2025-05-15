@@ -167,12 +167,33 @@ exports.getRetailersByLocation = async (req, res) => {
     }).populate('addedBy', 'name email');
 
     retailers.forEach(r => {
-      console.log(`[${r.retailerName}, ${r.shopName}, [${r.location.coordinates}], Added by: ${addedByInfo}]`);
+      console.log(`[${r.retailerName}, ${r.shopName}, [${r.location.coordinates}], Added by: ${r.addedBy ? r.addedBy.email : 'N/A'}]`);
     });
 
     res.json(retailers);
   } catch (error) {
     console.log('[ERROR]', error.message);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Admin Delete Retailer
+exports.adminDeleteRetailer = async (req, res) => {
+  try {
+    const retailerId = req.params.id;
+    console.log(`\n[ADMIN DELETE RETAILER] ID: ${retailerId}`);
+
+    const retailer = await Retailer.findByIdAndDelete(retailerId);
+
+    if (!retailer) {
+      console.log('[ERROR] Retailer not found for admin deletion');
+      return res.status(404).json({ message: 'Retailer not found' });
+    }
+
+    console.log(`[ADMIN] Retailer [${retailer.retailerName}, ${retailer.shopName}] deleted successfully`);
+    res.json({ message: 'Retailer deleted successfully by admin' });
+  } catch (error) {
+    console.log('[ERROR] Admin deleting retailer:', error.message);
     res.status(500).json({ message: error.message });
   }
 };

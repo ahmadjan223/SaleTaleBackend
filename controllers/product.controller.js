@@ -67,3 +67,30 @@ exports.getProductById = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Admin Delete Product
+exports.adminDeleteProduct = async (req, res) => {
+  try {
+    const productId = req.params.id;
+    console.log(`\n[ADMIN DELETE PRODUCT] ID: ${productId}`);
+
+    const product = await Product.findByIdAndDelete(productId);
+
+    if (!product) {
+      console.log('[ERROR] Product not found for admin deletion');
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    console.log(`[ADMIN] Product [${product.name}] deleted successfully`);
+    res.json({ message: 'Product deleted successfully by admin' });
+  } catch (error) {
+    console.log('[ERROR] Admin deleting product:', error.message);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Placeholder for a regular delete if needed, e.g., by a specific user type (if products were user-tied)
+// exports.deleteProduct = async (req, res) => { ... };
+
+// Placeholder for updateProduct if needed
+// exports.updateProduct = async (req, res) => { ... };

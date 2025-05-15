@@ -180,4 +180,25 @@ exports.deleteSalesman = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: 'Error deleting salesman', error: error.message });
   }
+};
+
+// Admin Delete Salesman (uses _id from req.params.id)
+exports.adminDeleteSalesman = async (req, res) => {
+  try {
+    const salesmanId = req.params.id; // Expecting MongoDB _id
+    console.log(`\n[ADMIN DELETE SALESMAN] ID: ${salesmanId}`);
+
+    const salesman = await Salesman.findByIdAndDelete(salesmanId);
+
+    if (!salesman) {
+      console.log('[ERROR] Salesman not found for admin deletion');
+      return res.status(404).json({ message: 'Salesman not found' });
+    }
+
+    console.log(`[ADMIN] Salesman [${salesman.name}, ${salesman.email}] deleted successfully`);
+    res.json({ message: 'Salesman deleted successfully by admin' });
+  } catch (error) {
+    console.log('[ERROR] Admin deleting salesman:', error.message);
+    res.status(500).json({ message: error.message });
+  }
 }; 
