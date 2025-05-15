@@ -18,7 +18,28 @@ const salesmanRoutes = require('../routes/salesman.routes');
 
 const app = express();
 
-// Error handling middleware
+// Apply core middleware BEFORE route definitions
+app.use(cors({
+  origin: '*', // Allow all origins
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true // If you need to send cookies or authorization headers
+}));
+app.use(express.json()); // To parse JSON request bodies
+app.use(express.urlencoded({ extended: true })); // To parse URL-encoded request bodies
+
+// Logging middleware - can be here or after core middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
+// Use only existing routes
+app.use('/api/retailers', retailerRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/sales', saleRoutes);
+app.use('/api/salesmen', salesmanRoutes);
+
+// Error handling middleware - should be after routes
 app.use((err, req, res, next) => {
   console.error('Error:', err);
   res.status(500).json({
@@ -37,19 +58,6 @@ process.on('unhandledRejection', (err) => {
   console.error('Unhandled Rejection:', err);
   process.exit(1);
 });
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
-}));
-
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  next();
-});
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -69,12 +77,6 @@ app.get('/', (req, res) => {
     }
   });
 });
-
-// Use only existing routes
-app.use('/api/retailers', retailerRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/sales', saleRoutes);
-app.use('/api/salesmen', salesmanRoutes);
 
 // Wrap MongoDB connection in a try-catch
 try {
