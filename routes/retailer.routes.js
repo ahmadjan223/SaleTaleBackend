@@ -18,5 +18,6 @@ router.get('/admin/all', retailerController.getAllRetailers); // Auth can be add
 
 // Admin delete retailer - uses DELETE method
 router.delete('/admin/:id', retailerController.adminDeleteRetailer); // Similarly, add auth if needed: auth, retailerController.adminDeleteRetailer
+router.get('/admin/:id', retailerController.adminGetRetailer); // Similarly, add auth if needed: auth, retailerController.adminDeleteRetailer
 
 module.exports = router; 

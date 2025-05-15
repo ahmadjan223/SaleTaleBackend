@@ -198,3 +198,23 @@ exports.adminDeleteRetailer = async (req, res) => {
   }
 };
 
+exports.adminGetRetailer = async (req, res) => {
+  try {
+    console.log('\n[GET RETAILER BY ID]', req.params.id);
+
+    const retailer = await Retailer.findOne({
+      _id: req.params.id    });
+
+    if (!retailer) {
+      console.log('[ERROR] Retailer not found or access denied');
+      return res.status(404).json({ message: 'Retailer not found or access denied' });
+    }
+
+    console.log(`[${retailer.retailerName}, ${retailer.shopName}, [${retailer.location.coordinates}]]`);
+
+    res.json(retailer);
+  } catch (error) {
+    console.log('[ERROR]', error.message);
+    res.status(500).json({ message: error.message });
+  }
+};
