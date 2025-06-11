@@ -37,7 +37,7 @@ app.get('/', (req, res) => {
     status: 'running',
     version: '1.0.0',
     endpoints: {
-      salesman: '/api/salesman',
+      salesman: '/api/salesmen',
       retailers: '/api/retailers',
       products: '/api/products',
       sales: '/api/sales'
@@ -67,7 +67,7 @@ mongoose.connection.on('disconnected', () => {
 app.use('/api/retailers', retailerRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/sales', saleRoutes);
-app.use('/api/salesman', salesmanRoutes);
+app.use('/api/salesmen', salesmanRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

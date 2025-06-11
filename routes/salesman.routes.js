@@ -5,8 +5,8 @@ const auth = require('../middleware/auth'); // You'll need to create this middle
 // const adminAuth = require('../middleware/adminAuth'); // Optional
 
 // Public routes
-router.post('/register', salesmanController.createSalesman);
-router.post('/login', salesmanController.loginSalesman);
+router.post('/register', salesmanController.register);
+router.post('/login', salesmanController.login);
 
 // Protected routes (require general auth)
 router.get('/verified', auth, salesmanController.getVerifiedSalesmen);
@@ -20,5 +20,8 @@ router.get('/admin/all', salesmanController.getAllSalesmen); // Add adminAuth if
 // Admin delete salesman uses _id in param, not googleId like the other delete route
 router.delete('/admin/:id', salesmanController.adminDeleteSalesman); // Add adminAuth if needed
 router.get('/admin/details/:id', salesmanController.adminGetSalesmanById); // Route for getting specific salesman details by admin
+
+// Update salesman details (protected route)
+router.put('/:id', auth, salesmanController.update);
 
 module.exports = router; 

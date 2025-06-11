@@ -2,24 +2,33 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const SalesmanSchema = new mongoose.Schema({
-  googleId: {
+  id: {
     type: String,
     required: true,
     unique: true
+  },
+  firstName: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  lastName: {
+    type: String,
+    required: true,
+    trim: true
   },
   name: {
     type: String,
     required: true,
     trim: true
   },
-  givenName: {
+  contactNo: {
     type: String,
     required: true,
     trim: true
   },
-  familyName: {
+  contactNo2: {
     type: String,
-    required: true,
     trim: true
   },
   email: {
@@ -29,11 +38,9 @@ const SalesmanSchema = new mongoose.Schema({
     trim: true,
     lowercase: true
   },
-  photo: {
-    type: String
-  },
   password: {
     type: String,
+    required: true,
     minlength: 6
   },
   verified: {

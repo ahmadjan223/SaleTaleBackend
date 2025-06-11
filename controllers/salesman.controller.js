@@ -1,104 +1,149 @@
 const Salesman = require('../models/salesman.model');
 const jwt = require('jsonwebtoken');
+const { v4: uuidv4 } = require('uuid');
+const bcrypt = require('bcryptjs');
 
 // Create a new salesman
-exports.createSalesman = async (req, res) => {
-  try {
-    console.log("::[CREATING SALESMAN] Request Body:", req.body);
-    const { name, givenName, familyName, email, password, googleId, photo, phone } = req.body;
+// exports.createSalesman = async (req, res) => {
+//   try {
+//     console.log("::[CREATING SALESMAN] Request Body:", req.body);
+//     const { name, givenName, familyName, email, password, googleId, photo, phone } = req.body;
 
-    // Validate required fields
-    if (!phone) {
-      console.error('Phone number is missing in request body');
-      return res.status(400).json({ message: 'Phone number is required' });
-    }
+//     // Validate required fields
+//     if (!phone) {
+//       console.error('Phone number is missing in request body');
+//       return res.status(400).json({ message: 'Phone number is required' });
+//     }
 
-    // Check if user already exists
-    const existingUser = await Salesman.findOne({ googleId });
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists with this Google ID' });
-    }
+//     // Check if user already exists
+//     const existingUser = await Salesman.findOne({ googleId });
+//     if (existingUser) {
+//       return res.status(400).json({ message: 'User already exists with this Google ID' });
+//     }
 
-    // Create new salesman
-    const salesman = new Salesman({
-      name,
-      givenName,
-      familyName,
-      email,
-      password,
-      googleId,
-      photo,
-      phone,
-      verified: false
-    });
+//     // Create new salesman
+//     const salesman = new Salesman({
+//       name,
+//       givenName,
+//       familyName,
+//       email,
+//       password,
+//       googleId,
+//       photo,
+//       phone,
+//       verified: false
+//     });
 
-    console.log("::[CREATING SALESMAN] Salesman object:", salesman);
+//     console.log("::[CREATING SALESMAN] Salesman object:", salesman);
 
-    await salesman.save();
-    console.log("::[CREATING SALESMAN] Salesman saved successfully");
+//     await salesman.save();
+//     console.log("::[CREATING SALESMAN] Salesman saved successfully");
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { googleId: salesman.googleId },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '24h' }
-    );
+//     // Generate JWT token
+//     const token = jwt.sign(
+//       { googleId: salesman.googleId },
+//       process.env.JWT_SECRET || 'your-secret-key',
+//       { expiresIn: '24h' }
+//     );
 
-    res.status(201).json({
-      message: 'Salesman created successfully',
-      salesman: {
-        googleId: salesman.googleId,
-        name: salesman.name,
-        email: salesman.email,
-        verified: salesman.verified
-      },
-      token
-    });
-  } catch (error) {
-    console.error('Error creating salesman:', error);
-    console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      validationErrors: error.errors
-    });
-    res.status(500).json({ 
-      message: 'Error creating salesman', 
-      error: error.message,
-      validationErrors: error.errors
-    });
-  }
-};
+//     res.status(201).json({
+//       message: 'Salesman created successfully',
+//       salesman: {
+//         googleId: salesman.googleId,
+//         name: salesman.name,
+//         email: salesman.email,
+//         verified: salesman.verified
+//       },
+//       token
+//     });
+//   } catch (error) {
+//     console.error('Error creating salesman:', error);
+//     console.error('Error details:', {
+//       message: error.message,
+//       stack: error.stack,
+//       validationErrors: error.errors
+//     });
+//     res.status(500).json({ 
+//       message: 'Error creating salesman', 
+//       error: error.message,
+//       validationErrors: error.errors
+//     });
+//   }
+// };
 
 // Login salesman
-exports.loginSalesman = async (req, res) => {
+exports.login = async (req, res) => {
   try {
-    const { googleId } = req.body;
+    const { identifier, password } = req.body;
+    console.log('Login attempt for:', identifier);
 
-    // Find salesman by googleId
-    const salesman = await Salesman.findOne({ googleId });
+    if (!identifier || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide both identifier (email/contactNo) and password'
+      });
+    }
+
+    // First try to find by email
+    let salesman = await Salesman.findOne({ email: identifier.toLowerCase() });
+    
+    // If not found by email, try contact number
     if (!salesman) {
-      return res.status(401).json({ message: 'Invalid Google ID' });
+      salesman = await Salesman.findOne({ contactNo: identifier });
+    }
+
+    if (!salesman) {
+      console.log('No salesman found for:', identifier);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    console.log('Found salesman:', salesman.email);
+
+    // Check password
+    const isMatch = await bcrypt.compare(password, salesman.password);
+    console.log('Password match:', isMatch);
+
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
     }
 
     // Generate JWT token
     const token = jwt.sign(
-      { googleId: salesman.googleId },
+      { 
+        id: salesman.id,
+        email: salesman.email,
+        name: salesman.name
+      },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
 
-    res.json({
+    // Remove password from response
+    const salesmanResponse = salesman.toObject();
+    delete salesmanResponse.password;
+
+    res.status(200).json({
+      success: true,
       message: 'Login successful',
-      salesman: {
-        googleId: salesman.googleId,
-        name: salesman.name,
-        email: salesman.email,
-        verified: salesman.verified
-      },
-      token
+      data: {
+        salesman: salesmanResponse,
+        token
+      }
     });
+
   } catch (error) {
-    res.status(500).json({ message: 'Error logging in', error: error.message });
+    console.error('Login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error during login',
+      error: error.message
+    });
   }
 };
 
@@ -223,4 +268,120 @@ exports.adminGetSalesmanById = async (req, res) => {
     console.log('[ERROR] Admin fetching salesman by ID:', error.message);
     res.status(500).json({ message: error.message });
   }
+};
+
+// Register a new salesman
+exports.register = async (req, res) => {
+  try {
+    const {
+      firstName,
+      lastName,
+      contactNo,
+      contactNo2,
+      email,
+      password
+    } = req.body;
+
+    // Check if salesman already exists
+    const existingSalesman = await Salesman.findOne({ email });
+    if (existingSalesman) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already registered'
+      });
+    }
+
+    // Create new salesman
+    const salesman = new Salesman({
+      id: uuidv4(),
+      firstName,
+      lastName,
+      name: `${firstName} ${lastName}`,
+      contactNo,
+      contactNo2,
+      email,
+      password
+    });
+
+    // Save salesman
+    await salesman.save();
+
+    // Remove password from response
+    const salesmanResponse = salesman.toObject();
+    delete salesmanResponse.password;
+
+    res.status(201).json({
+      success: true,
+      message: 'Salesman registered successfully',
+      data: salesmanResponse
+    });
+
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error registering salesman',
+      error: error.message
+    });
+  }
+};
+
+// Update salesman details
+exports.update = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    // Don't allow updating certain fields
+    delete updateData.password;
+    delete updateData.id;
+    delete updateData.email; // Email should be updated through a separate endpoint
+    delete updateData.verified;
+
+    // If name fields are updated, update the full name
+    if (updateData.firstName || updateData.lastName) {
+      const salesman = await Salesman.findById(id);
+      if (!salesman) {
+        return res.status(404).json({
+          success: false,
+          message: 'Salesman not found'
+        });
+      }
+      updateData.name = `${updateData.firstName || salesman.firstName} ${updateData.lastName || salesman.lastName}`;
+    }
+
+    const updatedSalesman = await Salesman.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedSalesman) {
+      return res.status(404).json({
+        success: false,
+        message: 'Salesman not found'
+      });
+    }
+
+    // Remove password from response
+    const salesmanResponse = updatedSalesman.toObject();
+    delete salesmanResponse.password;
+
+    res.status(200).json({
+      success: true,
+      message: 'Salesman updated successfully',
+      data: salesmanResponse
+    });
+
+  } catch (error) {
+    console.error('Update error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating salesman',
+      error: error.message
+    });
+  }
 }; 
+
+
+
