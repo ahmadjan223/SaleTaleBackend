@@ -46,14 +46,14 @@ exports.createRetailer = async (req, res) => {
     }
 
     // Destructure necessary fields from the request body
-    const { retailerName, shopName, location } = req.body;
+    const { retailerName, shopName, contactNo, contactNo2, address, location } = req.body;
 
     // Check for missing required fields
-    if (!retailerName || !shopName || !location || !location.coordinates) {
+    if (!retailerName || !shopName || !contactNo || !address || !location || !location.coordinates) {
       console.log('[ERROR] Missing required fields');
       return res.status(400).json({
         message: 'Missing required fields',
-        required: ['retailerName', 'shopName', 'location (with coordinates: [longitude, latitude])']
+        required: ['retailerName', 'shopName', 'contactNo', 'address', 'location (with coordinates: [longitude, latitude])']
       });
     }
 
@@ -67,7 +67,7 @@ exports.createRetailer = async (req, res) => {
     await retailer.save();
 
     // Log the retailer details for debugging
-    console.log(`[${retailer.retailerName}, ${retailer.shopName}, [${retailer.location.coordinates}], Added by ID: ${req.salesman.email}]`);
+    console.log(`[${retailer.retailerName}, ${retailer.shopName}, ${retailer.contactNo}, ${retailer.address}, [${retailer.location.coordinates}], Added by ID: ${req.salesman.email}]`);
 
     // Send the retailer data as the response
     res.status(201).json(retailer);

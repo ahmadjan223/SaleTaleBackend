@@ -11,6 +11,20 @@ const retailerSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  contactNo: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  contactNo2: {
+    type: String,
+    trim: true
+  },
+  address: {
+    type: String,
+    required: true,
+    trim: true
+  },
   location: {
     type: {
       type: String,
