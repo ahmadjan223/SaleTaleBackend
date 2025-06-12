@@ -5,10 +5,11 @@ exports.getRetailers = async (req, res) => {
     const userId = req.salesman._id;
     console.log(`\n[GET RETAILERS] AddedBy: ${userId}`);
 
-    const retailers = await Retailer.find({ addedBy: userId });
+    const retailers = await Retailer.find({ addedBy: userId })
+      .select('retailerName shopName contactNo contactNo2 address location createdAt addedBy');
 
     retailers.forEach(r => {
-      console.log(`[${r.retailerName}, ${r.shopName}, [${r.location.coordinates}], Added by: ${req.salesman.email}]`);
+      console.log(`[${r.retailerName}, ${r.shopName}, ${r.contactNo}, ${r.contactNo2}, ${r.address}, [${r.location.coordinates}], Added by: ${req.salesman.email}]`);
     });
 
     res.json(retailers);

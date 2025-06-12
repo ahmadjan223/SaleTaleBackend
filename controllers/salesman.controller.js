@@ -215,14 +215,27 @@ exports.logoutSalesman = async (req, res) => {
 exports.deleteSalesman = async (req, res) => {
   try {
     const { googleId } = req.params;
+    // Only delete the salesman document, don't cascade to sales
     const salesman = await Salesman.findOneAndDelete({ googleId });
 
     if (!salesman) {
       return res.status(404).json({ message: 'Salesman not found' });
     }
 
-    res.json({ message: 'Salesman deleted successfully' });
+    // Log the deletion but keep sales data intact
+    console.log(`[DELETED SALESMAN] ID: ${salesman._id}, Name: ${salesman.name}, Email: ${salesman.email}`);
+    console.log('[NOTE] Associated sales data has been preserved');
+
+    res.json({ 
+      message: 'Salesman deleted successfully. Associated sales data has been preserved.',
+      deletedSalesman: {
+        id: salesman._id,
+        name: salesman.name,
+        email: salesman.email
+      }
+    });
   } catch (error) {
+    console.error('[ERROR] Delete salesman error:', error);
     res.status(500).json({ message: 'Error deleting salesman', error: error.message });
   }
 };
@@ -230,9 +243,10 @@ exports.deleteSalesman = async (req, res) => {
 // Admin Delete Salesman (uses _id from req.params.id)
 exports.adminDeleteSalesman = async (req, res) => {
   try {
-    const salesmanId = req.params.id; // Expecting MongoDB _id
+    const salesmanId = req.params.id;
     console.log(`\n[ADMIN DELETE SALESMAN] ID: ${salesmanId}`);
 
+    // Only delete the salesman document, don't cascade to sales
     const salesman = await Salesman.findByIdAndDelete(salesmanId);
 
     if (!salesman) {
@@ -240,8 +254,18 @@ exports.adminDeleteSalesman = async (req, res) => {
       return res.status(404).json({ message: 'Salesman not found' });
     }
 
+    // Log the deletion but keep sales data intact
     console.log(`[ADMIN] Salesman [${salesman.name}, ${salesman.email}] deleted successfully`);
-    res.json({ message: 'Salesman deleted successfully by admin' });
+    console.log('[NOTE] Associated sales data has been preserved');
+
+    res.json({ 
+      message: 'Salesman deleted successfully by admin. Associated sales data has been preserved.',
+      deletedSalesman: {
+        id: salesman._id,
+        name: salesman.name,
+        email: salesman.email
+      }
+    });
   } catch (error) {
     console.log('[ERROR] Admin deleting salesman:', error.message);
     res.status(500).json({ message: error.message });
