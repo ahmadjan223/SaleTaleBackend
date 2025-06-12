@@ -1,18 +1,34 @@
 const mongoose = require('mongoose');
 
+// Schema for individual product in a sale
+const ProductSaleSchema = new mongoose.Schema({
+  quantity: {
+    type: Number,
+    required: true,
+    min: 1
+  },
+  price: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  total: {
+    type: Number,
+    required: true,
+    min: 0
+  }
+}, { _id: false });
+
 const saleSchema = new mongoose.Schema({
+//if we use ref that object will be attached instead of objectid.
   retailer: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Retailer',
     required: true
   },
-  product: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Product',
-    required: true
-  },
-  quantity: {
-    type: Number,
+  products: {
+    type: Map,
+    of: ProductSaleSchema,
     required: true
   },
   amount: {
