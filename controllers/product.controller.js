@@ -92,8 +92,30 @@ exports.adminDeleteProduct = async (req, res) => {
 // Placeholder for a regular delete if needed, e.g., by a specific user type (if products were user-tied)
 // exports.deleteProduct = async (req, res) => { ... };
 
-// Placeholder for updateProduct if needed
-// exports.updateProduct = async (req, res) => { ... };
+// Update Product
+exports.updateProduct = async (req, res) => {
+  try {
+    const productId = req.params.id;
+    console.log('Received request to update product with ID:', productId, 'Data:', req.body);
+
+    const updatedProduct = await Product.findByIdAndUpdate(
+      productId,
+      req.body,
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedProduct) {
+      console.warn('Product not found for update, ID:', productId);
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    console.log('Product updated successfully:', updatedProduct);
+    res.json(updatedProduct);
+  } catch (error) {
+    console.error('Error updating product:', error.message);
+    res.status(400).json({ message: error.message });
+  }
+};
 
 // Admin Get Product By ID
 exports.adminGetProductById= async (req, res) => {
@@ -114,5 +136,47 @@ exports.adminGetProductById= async (req, res) => {
   } catch (error) {
     console.log('[ERROR] Admin fetching product by ID:', error.message);
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Toggle product active status
+exports.toggleProductStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { active } = req.body;
+
+    if (typeof active !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'Active status must be a boolean value'
+      });
+    }
+
+    const product = await Product.findByIdAndUpdate(
+      id,
+      { active },
+      { new: true }
+    );
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Product ${active ? 'activated' : 'deactivated'} successfully`,
+      data: product
+    });
+
+  } catch (error) {
+    console.error('Toggle status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating product status',
+      error: error.message
+    });
   }
 };
