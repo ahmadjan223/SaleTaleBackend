@@ -1,6 +1,8 @@
 const Salesman = require('../models/salesman.model');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const Sale = require('../models/sale.model');
+const Retailer = require('../models/retailer.model');
 
 // Create a new salesman
 // exports.createSalesman = async (req, res) => {
@@ -245,26 +247,47 @@ exports.adminDeleteSalesman = async (req, res) => {
     const salesmanId = req.params.id;
     console.log(`\n[ADMIN DELETE SALESMAN] ID: ${salesmanId}`);
 
-    // Only delete the salesman document, don't cascade to sales
-    const salesman = await Salesman.findByIdAndDelete(salesmanId);
+    // Start a session for transaction
+    const session = await Salesman.startSession();
+    session.startTransaction();
 
-    if (!salesman) {
-      console.log('[ERROR] Salesman not found for admin deletion');
-      return res.status(404).json({ message: 'Salesman not found' });
-    }
+    try {
+      // Delete all sales associated with this salesman
+      const deletedSales = await Sale.deleteMany({ addedBy: salesmanId }, { session });
+      console.log(`[ADMIN] Deleted ${deletedSales.deletedCount} sales associated with salesman`);
 
-    // Log the deletion but keep sales data intact
-    console.log(`[ADMIN] Salesman [${salesman.name}, ${salesman.email}] deleted successfully`);
-    console.log('[NOTE] Associated sales data has been preserved');
+      // Delete all retailers associated with this salesman
+      const deletedRetailers = await Retailer.deleteMany({ addedBy: salesmanId }, { session });
+      console.log(`[ADMIN] Deleted ${deletedRetailers.deletedCount} retailers associated with salesman`);
 
-    res.json({ 
-      message: 'Salesman deleted successfully by admin. Associated sales data has been preserved.',
-      deletedSalesman: {
-        id: salesman._id,
-        name: salesman.name,
-        email: salesman.email
+      // Delete the salesman
+      const salesman = await Salesman.findByIdAndDelete(salesmanId, { session });
+
+      if (!salesman) {
+        await session.abortTransaction();
+        console.log('[ERROR] Salesman not found for admin deletion');
+        return res.status(404).json({ message: 'Salesman not found' });
       }
-    });
+
+      await session.commitTransaction();
+      console.log(`[ADMIN] Salesman [${salesman.name}, ${salesman.email}] and all associated data deleted successfully`);
+
+      res.json({ 
+        message: 'Salesman and all associated data deleted successfully by admin',
+        deletedSalesman: {
+          id: salesman._id,
+          name: salesman.name,
+          email: salesman.email
+        },
+        deletedSalesCount: deletedSales.deletedCount,
+        deletedRetailersCount: deletedRetailers.deletedCount
+      });
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
   } catch (error) {
     console.log('[ERROR] Admin deleting salesman:', error.message);
     res.status(500).json({ message: error.message });

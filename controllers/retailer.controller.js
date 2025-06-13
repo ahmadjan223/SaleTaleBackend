@@ -1,4 +1,5 @@
 const Retailer = require('../models/retailer.model');
+const Sale = require('../models/sale.model');
 
 exports.getRetailers = async (req, res) => {
   try {
@@ -183,15 +184,42 @@ exports.adminDeleteRetailer = async (req, res) => {
     const retailerId = req.params.id;
     console.log(`\n[ADMIN DELETE RETAILER] ID: ${retailerId}`);
 
-    const retailer = await Retailer.findByIdAndDelete(retailerId);
+    // Start a session for transaction
+    const session = await Retailer.startSession();
+    session.startTransaction();
 
-    if (!retailer) {
-      console.log('[ERROR] Retailer not found for admin deletion');
-      return res.status(404).json({ message: 'Retailer not found' });
+    try {
+      // Delete all sales associated with this retailer
+      const deletedSales = await Sale.deleteMany({ retailer: retailerId }, { session });
+      console.log(`[ADMIN] Deleted ${deletedSales.deletedCount} sales associated with retailer`);
+
+      // Delete the retailer
+      const retailer = await Retailer.findByIdAndDelete(retailerId, { session });
+
+      if (!retailer) {
+        await session.abortTransaction();
+        console.log('[ERROR] Retailer not found for admin deletion');
+        return res.status(404).json({ message: 'Retailer not found' });
+      }
+
+      await session.commitTransaction();
+      console.log(`[ADMIN] Retailer [${retailer.retailerName}, ${retailer.shopName}] and all associated sales deleted successfully`);
+      
+      res.json({ 
+        message: 'Retailer and all associated sales deleted successfully by admin',
+        deletedRetailer: {
+          id: retailer._id,
+          name: retailer.retailerName,
+          shopName: retailer.shopName
+        },
+        deletedSalesCount: deletedSales.deletedCount
+      });
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
     }
-
-    console.log(`[ADMIN] Retailer [${retailer.retailerName}, ${retailer.shopName}] deleted successfully`);
-    res.json({ message: 'Retailer deleted successfully by admin' });
   } catch (error) {
     console.log('[ERROR] Admin deleting retailer:', error.message);
     res.status(500).json({ message: error.message });
