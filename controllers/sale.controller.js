@@ -40,8 +40,9 @@ exports.createSale = async (req, res) => {
 exports.getSales = async (req, res) => {
   try {
     const sales = await Sale.find({ addedBy: req.salesman._id })
+      .select('retailer products amount coordinates addedBy valid createdAt')
       .populate('retailer')
-      .populate('addedBy', '_id name email contactNo contactNo2 verified')
+      .populate('addedBy', '_id name email contactNo contactNo2 active')
       .sort({ createdAt: -1 });
 
     console.log(`\n::[GET SALES] Found ${sales.length} sales for salesman: ${req.salesman.email}`);
@@ -66,8 +67,10 @@ exports.getSales = async (req, res) => {
 exports.getAllSales = async (req, res) => {
   try {
     const sales = await Sale.find({})
+      .select('retailer products amount coordinates addedBy valid createdAt')
       .populate('retailer')
-      .populate('addedBy', 'name email');
+      .populate('addedBy', 'name email contactNo contactNo2 active')
+      .sort({ createdAt: -1 });
 
     console.log('\n::[GET ALL SALES]');
 
@@ -106,7 +109,9 @@ exports.getAllSales = async (req, res) => {
 exports.getRetailerSales = async (req, res) => {
   try {
     const sales = await Sale.find({ retailer: req.params.retailerId, addedBy: req.salesman._id })
-      .populate('addedBy', '_id name email contactNo contactNo2 verified');
+      .select('retailer products amount coordinates addedBy valid createdAt')
+      .populate('addedBy', '_id name email contactNo contactNo2 active')
+      .sort({ createdAt: -1 });
 
     console.log(`[RETAILER SALES] Retailer ID: ${req.params.retailerId}`);
     sales.forEach(sale => {
@@ -299,8 +304,9 @@ exports.getFilteredSales = async (req, res) => {
 exports.getSale = async (req, res) => {
   try {
     const sale = await Sale.findOne({ _id: req.params.id, addedBy: req.salesman._id })
+      .select('retailer products amount coordinates addedBy valid createdAt')
       .populate('retailer')
-      .populate('addedBy', '_id name email contactNo contactNo2 verified');
+      .populate('addedBy', '_id name email contactNo contactNo2 active');
 
     if (!sale) {
       console.log('::[ERROR] Sale not found');
@@ -322,6 +328,74 @@ exports.getSale = async (req, res) => {
       id: req.params.id
     });
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Toggle sale validity
+exports.toggleSaleValidity = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { valid } = req.body;
+
+    if (typeof valid !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid status must be a boolean value'
+      });
+    }
+
+    const sale = await Sale.findByIdAndUpdate(
+      id,
+      { valid },
+      { new: true }
+    );
+
+    if (!sale) {
+      return res.status(404).json({
+        success: false,
+        message: 'Sale not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Sale ${valid ? 'validated' : 'invalidated'} successfully`,
+      data: sale
+    });
+
+  } catch (error) {
+    console.error('Toggle validity error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating sale validity',
+      error: error.message
+    });
+  }
+};
+
+// Get valid sales
+exports.getValidSales = async (req, res) => {
+  try {
+    const sales = await Sale.find({ valid: true })
+      .populate('retailer')
+      .populate('addedBy', '_id name email contactNo contactNo2 active')
+      .sort({ createdAt: -1 });
+    res.json(sales);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching valid sales', error: error.message });
+  }
+};
+
+// Get invalid sales
+exports.getInvalidSales = async (req, res) => {
+  try {
+    const sales = await Sale.find({ valid: false })
+      .populate('retailer')
+      .populate('addedBy', '_id name email contactNo contactNo2 active')
+      .sort({ createdAt: -1 });
+    res.json(sales);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching invalid sales', error: error.message });
   }
 };
 

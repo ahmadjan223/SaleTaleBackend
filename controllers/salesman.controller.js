@@ -148,15 +148,16 @@ exports.login = async (req, res) => {
   }
 };
 
-// Get verified salesmen
-exports.getVerifiedSalesmen = async (req, res) => {
+// Get active salesmen
+exports.getActiveSalesmen = async (req, res) => {
   try {
-    const salesmen = await Salesman.find({ verified: true }).select('-password');
+    const salesmen = await Salesman.find({ active: true }).select('-password');
     res.json(salesmen);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching verified salesmen', error: error.message });
+    res.status(500).json({ message: 'Error fetching active salesmen', error: error.message });
   }
 };
+
 exports.getAllSalesmen = async (req, res) => {
   try {
     const salesmen = await Salesman.find({}).select('-password');
@@ -166,17 +167,59 @@ exports.getAllSalesmen = async (req, res) => {
     });
     res.json(salesmen);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching verified salesmen', error: error.message });
+    res.status(500).json({ message: 'Error fetching salesmen', error: error.message });
   }
 };
 
-// Get unverified salesmen
-exports.getUnverifiedSalesmen = async (req, res) => {
+// Get inactive salesmen
+exports.getInactiveSalesmen = async (req, res) => {
   try {
-    const salesmen = await Salesman.find({ verified: false }).select('-password');
+    const salesmen = await Salesman.find({ active: false }).select('-password');
     res.json(salesmen);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching unverified salesmen', error: error.message });
+    res.status(500).json({ message: 'Error fetching inactive salesmen', error: error.message });
+  }
+};
+
+// Activate/deactivate salesman
+exports.toggleSalesmanStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { active } = req.body;
+
+    if (typeof active !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'Active status must be a boolean value'
+      });
+    }
+
+    const salesman = await Salesman.findByIdAndUpdate(
+      id,
+      { active },
+      { new: true }
+    ).select('-password');
+
+    if (!salesman) {
+      return res.status(404).json({
+        success: false,
+        message: 'Salesman not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Salesman ${active ? 'activated' : 'deactivated'} successfully`,
+      data: salesman
+    });
+
+  } catch (error) {
+    console.error('Toggle status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating salesman status',
+      error: error.message
+    });
   }
 };
 

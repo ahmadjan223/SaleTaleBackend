@@ -38,9 +38,9 @@ const SalesmanSchema = new mongoose.Schema({
     required: true,
     minlength: 6
   },
-  verified: {
+  active: {
     type: Boolean,
-    default: false
+    default: true
   }
 }, {
   timestamps: true

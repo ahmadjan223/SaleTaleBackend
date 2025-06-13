@@ -7,8 +7,8 @@ exports.getRetailers = async (req, res) => {
     console.log(`\n[GET RETAILERS] AddedBy: ${userId}`);
 
     const retailers = await Retailer.find({ addedBy: userId })
-      .select('retailerName shopName contactNo contactNo2 address location createdAt addedBy')
-      .populate('addedBy', 'name email contactNo verified');
+      .select('retailerName shopName contactNo contactNo2 address location createdAt addedBy active')
+      .populate('addedBy', 'name email contactNo active');
 
     retailers.forEach(r => {
       console.log(`[${r.retailerName}, ${r.shopName}, ${r.contactNo}, ${r.contactNo2}, ${r.address}, [${r.location.coordinates}], Added by: ${req.salesman.email}]`);
@@ -26,7 +26,8 @@ exports.getAllRetailers = async (req, res) => {
     console.log(`\n[GET ALL RETAILERS]`);
 
     const retailers = await Retailer.find({})
-      .populate('addedBy', 'name email contactNo verified');
+      .select('retailerName shopName contactNo contactNo2 address location createdAt addedBy active')
+      .populate('addedBy', 'name email contactNo active');
 
     retailers.forEach(r => {
       console.log(`[${r.retailerName}, ${r.shopName}, [${r.location.coordinates}]]`);
@@ -88,7 +89,8 @@ exports.getRetailerById = async (req, res) => {
     const retailer = await Retailer.findOne({
       _id: req.params.id,
       addedBy: req.salesman._id
-    }).populate('addedBy', 'name email contactNo verified');
+    }).select('retailerName shopName contactNo contactNo2 address location createdAt addedBy active')
+      .populate('addedBy', 'name email contactNo active');
 
     if (!retailer) {
       console.log('[ERROR] Retailer not found or access denied');
@@ -113,7 +115,7 @@ exports.updateRetailer = async (req, res) => {
       { _id: req.params.id, addedBy: req.salesman._id},
       updateData,
       { new: true, runValidators: true }
-    ).populate('addedBy', 'name email contactNo verified');
+    ).populate('addedBy', 'name email contactNo active');
 
     if (!retailer) {
       console.log('[ERROR] Retailer not found or not authorized to update');
@@ -245,5 +247,67 @@ exports.adminGetRetailerById = async (req, res) => {
   } catch (error) {
     console.log('[ERROR]', error.message);
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Toggle retailer active status
+exports.toggleRetailerStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { active } = req.body;
+
+    if (typeof active !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'Active status must be a boolean value'
+      });
+    }
+
+    const retailer = await Retailer.findByIdAndUpdate(
+      id,
+      { active },
+      { new: true }
+    );
+
+    if (!retailer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Retailer not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Retailer ${active ? 'activated' : 'deactivated'} successfully`,
+      data: retailer
+    });
+
+  } catch (error) {
+    console.error('Toggle status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating retailer status',
+      error: error.message
+    });
+  }
+};
+
+// Get active retailers
+exports.getActiveRetailers = async (req, res) => {
+  try {
+    const retailers = await Retailer.find({ active: true });
+    res.json(retailers);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching active retailers', error: error.message });
+  }
+};
+
+// Get inactive retailers
+exports.getInactiveRetailers = async (req, res) => {
+  try {
+    const retailers = await Retailer.find({ active: false });
+    res.json(retailers);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching inactive retailers', error: error.message });
   }
 };

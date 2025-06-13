@@ -9,11 +9,11 @@ router.post('/register', salesmanController.register);
 router.post('/login', salesmanController.login);
 
 // Protected routes (require general auth)
-router.get('/verified', auth, salesmanController.getVerifiedSalesmen);
-router.get('/unverified', auth, salesmanController.getUnverifiedSalesmen);
-router.put('/verify/:googleId', auth, salesmanController.verifySalesman); // This might be an admin action
+router.get('/active', auth, salesmanController.getActiveSalesmen);
+router.get('/inactive', auth, salesmanController.getInactiveSalesmen);
+router.put('/toggle-status/:id', auth, salesmanController.toggleSalesmanStatus);
 router.post('/logout', auth, salesmanController.logoutSalesman);
-router.delete('/:googleId', auth, salesmanController.deleteSalesman); // Salesman deleting their own or specific context
+router.delete('/:id', auth, salesmanController.deleteSalesman);
 
 // Admin specific routes
 router.get('/admin/all', salesmanController.getAllSalesmen); // Add adminAuth if needed

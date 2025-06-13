@@ -47,7 +47,10 @@ const saleSchema = new mongoose.Schema({
     }
   },
   addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Salesman', required: true },
-
+  valid: {
+    type: Boolean,
+    default: true
+  },
   createdAt: {
     type: Date,
     default: Date.now
