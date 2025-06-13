@@ -4,7 +4,14 @@ exports.createProduct = async (req, res) => {
   try {
     console.log('Received request to create product with data:', req.body);
 
-    const product = new Product(req.body);
+    // Set both addedBy and assignedSalesman to the current user's ID
+    const productData = {
+      ...req.body,
+      addedBy: req.user._id,
+      assignedSalesman: req.user._id
+    };
+
+    const product = new Product(productData);
     await product.save();
 
     console.log('Product saved successfully:', product);
@@ -98,9 +105,16 @@ exports.updateProduct = async (req, res) => {
     const productId = req.params.id;
     console.log('Received request to update product with ID:', productId, 'Data:', req.body);
 
+    // Set both addedBy and assignedSalesman to the current user's ID
+    const updateData = {
+      ...req.body,
+      addedBy: req.user._id,
+      assignedSalesman: req.user._id
+    };
+
     const updatedProduct = await Product.findByIdAndUpdate(
       productId,
-      req.body,
+      updateData,
       { new: true, runValidators: true }
     );
 

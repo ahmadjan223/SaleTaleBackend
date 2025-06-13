@@ -19,6 +19,15 @@ const productSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  addedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true
+  },
+  assignedSalesman: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Salesman',
+    required: true
+  },
   createdAt: {
     type: Date,
     default: Date.now

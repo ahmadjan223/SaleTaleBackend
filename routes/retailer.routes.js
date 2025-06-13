@@ -16,6 +16,12 @@ router.delete('/:id', auth, retailerController.deleteRetailer); // Salesman dele
 // Assuming getAllRetailers in controller is suitable for admin (fetches all)
 router.get('/admin/all', retailerController.getAllRetailers); // Auth can be added if all admin routes need it: auth, retailerController.getAllRetailers
 
+// Admin create retailer with assigned salesman
+router.post('/admin/create', retailerController.adminCreateRetailer);
+
+// Admin update retailer with assigned salesman
+router.put('/admin/:id', retailerController.adminUpdateRetailer);
+
 // Admin delete retailer - uses DELETE method
 router.delete('/admin/:id', retailerController.adminDeleteRetailer); // Similarly, add auth if needed: auth, retailerController.adminDeleteRetailer
 // Ensure this route exists for fetching specific retailer details by ID for admin purposes
