@@ -6,7 +6,8 @@ exports.getRetailers = async (req, res) => {
     console.log(`\n[GET RETAILERS] AddedBy: ${userId}`);
 
     const retailers = await Retailer.find({ addedBy: userId })
-      .select('retailerName shopName contactNo contactNo2 address location createdAt addedBy');
+      .select('retailerName shopName contactNo contactNo2 address location createdAt addedBy')
+      .populate('addedBy', 'name email contactNo verified');
 
     retailers.forEach(r => {
       console.log(`[${r.retailerName}, ${r.shopName}, ${r.contactNo}, ${r.contactNo2}, ${r.address}, [${r.location.coordinates}], Added by: ${req.salesman.email}]`);
@@ -23,7 +24,8 @@ exports.getAllRetailers = async (req, res) => {
   try {
     console.log(`\n[GET ALL RETAILERS]`);
 
-    const retailers = await Retailer.find({});
+    const retailers = await Retailer.find({})
+      .populate('addedBy', 'name email contactNo verified');
 
     retailers.forEach(r => {
       console.log(`[${r.retailerName}, ${r.shopName}, [${r.location.coordinates}]]`);
@@ -85,7 +87,7 @@ exports.getRetailerById = async (req, res) => {
     const retailer = await Retailer.findOne({
       _id: req.params.id,
       addedBy: req.salesman._id
-    });
+    }).populate('addedBy', 'name email contactNo verified');
 
     if (!retailer) {
       console.log('[ERROR] Retailer not found or access denied');
@@ -101,7 +103,6 @@ exports.getRetailerById = async (req, res) => {
   }
 };
 
-
 exports.updateRetailer = async (req, res) => {
   try {
     console.log('\n[UPDATE RETAILER]', req.params.id);
@@ -111,7 +112,7 @@ exports.updateRetailer = async (req, res) => {
       { _id: req.params.id, addedBy: req.salesman._id},
       updateData,
       { new: true, runValidators: true }
-    );
+    ).populate('addedBy', 'name email contactNo verified');
 
     if (!retailer) {
       console.log('[ERROR] Retailer not found or not authorized to update');
@@ -126,8 +127,6 @@ exports.updateRetailer = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
-
-
 
 exports.deleteRetailer = async (req, res) => {
   try {
@@ -165,7 +164,7 @@ exports.getRetailersByLocation = async (req, res) => {
           $maxDistance: radius * 1000
         }
       }
-    }).populate('addedBy', 'name email');
+    }).populate('addedBy', 'name email contactNo verified');
 
     retailers.forEach(r => {
       console.log(`[${r.retailerName}, ${r.shopName}, [${r.location.coordinates}], Added by: ${r.addedBy ? r.addedBy.email : 'N/A'}]`);
@@ -204,7 +203,8 @@ exports.adminGetRetailerById = async (req, res) => {
     console.log('\n[GET RETAILER BY ID]', req.params.id);
 
     const retailer = await Retailer.findOne({
-      _id: req.params.id    });
+      _id: req.params.id
+    }).populate('addedBy', 'name email contactNo verified');
 
     if (!retailer) {
       console.log('[ERROR] Retailer not found or access denied');

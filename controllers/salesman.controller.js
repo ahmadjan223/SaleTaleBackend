@@ -1,6 +1,5 @@
 const Salesman = require('../models/salesman.model');
 const jwt = require('jsonwebtoken');
-const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
 
 // Create a new salesman
@@ -116,7 +115,7 @@ exports.login = async (req, res) => {
     // Generate JWT token
     const token = jwt.sign(
       { 
-        id: salesman.id,
+        _id: salesman._id,
         email: salesman.email,
         name: salesman.name
       },
@@ -306,6 +305,14 @@ exports.register = async (req, res) => {
       password
     } = req.body;
 
+    // Validate password length
+    if (!password || password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long'
+      });
+    }
+
     // Check if salesman already exists
     const existingSalesman = await Salesman.findOne({ email });
     if (existingSalesman) {
@@ -317,7 +324,6 @@ exports.register = async (req, res) => {
 
     // Create new salesman
     const salesman = new Salesman({
-      id: uuidv4(),
       firstName,
       lastName,
       name: `${firstName} ${lastName}`,

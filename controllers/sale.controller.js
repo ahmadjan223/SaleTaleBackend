@@ -41,38 +41,23 @@ exports.getSales = async (req, res) => {
   try {
     const sales = await Sale.find({ addedBy: req.salesman._id })
       .populate('retailer')
-      .populate('addedBy', 'name email');
+      .populate('addedBy', '_id name email contactNo contactNo2 verified')
+      .sort({ createdAt: -1 });
 
-    console.log('\n::[GET SALES] AddedBy:', req.salesman.email);
-
+    console.log(`\n::[GET SALES] Found ${sales.length} sales for salesman: ${req.salesman.email}`);
     sales.forEach(sale => {
-      // Validate required fields
-      if (!sale.retailer || !sale.products || !sale.amount || !sale.coordinates) {
-        console.log(`[WARNING] Sale ${sale._id} is missing required fields`);
-        return;
-      }
-
-      // Log sale details
       const productDetails = Object.entries(sale.products)
-        .map(([productId, details]) => {
-          // Validate product details
-          if (!details.quantity || !details.price || !details.total) {
-            console.log(`[WARNING] Product ${productId} in sale ${sale._id} is missing required fields`);
-            return `${productId}: Invalid data`;
-          }
-          return `${productId}: ${details.quantity} units @ $${details.price} each (Total: $${details.total})`;
-        })
+        .map(([productId, details]) => `${productId}: ${details.quantity} units @ $${details.price} each`)
         .join(', ');
-
-      console.log(`[SALE] ID: ${sale._id}, Retailer: ${sale.retailer?.shopName || sale.retailer}, Products: ${productDetails}, Total Amount: $${sale.amount}, Coordinates: [${sale.coordinates.coordinates}]`);
+      
+      console.log(`[SALE] Products: ${productDetails}, Total Amount: ${sale.amount}, Coordinates: [${sale.coordinates?.coordinates}]`);
     });
 
     res.json(sales);
   } catch (error) {
     console.log('::[ERROR] Get sales error:', {
       error: error.message,
-      stack: error.stack,
-      salesman: req.salesman.email
+      stack: error.stack
     });
     res.status(500).json({ message: error.message });
   }
@@ -121,7 +106,7 @@ exports.getAllSales = async (req, res) => {
 exports.getRetailerSales = async (req, res) => {
   try {
     const sales = await Sale.find({ retailer: req.params.retailerId, addedBy: req.salesman._id })
-      .populate('addedBy', 'name email');
+      .populate('addedBy', '_id name email contactNo contactNo2 verified');
 
     console.log(`[RETAILER SALES] Retailer ID: ${req.params.retailerId}`);
     sales.forEach(sale => {
@@ -202,7 +187,8 @@ exports.updateSale = async (req, res) => {
       { _id: req.params.id, addedBy: req.salesman._id },
       req.body,
       { new: true, runValidators: true }
-    ).populate('retailer addedBy');
+    ).populate('retailer')
+     .populate('addedBy', '_id name email contactNo contactNo2 verified');
 
     if (!sale) {
       console.log('::[ERROR] Sale not found for update');
@@ -278,15 +264,16 @@ exports.getFilteredSales = async (req, res) => {
     if (retailer) filter.retailer = retailer;
     if (salesman) filter.addedBy = salesman;
     
-    // Filter by product - using $exists to check if the product exists in the products Map
+    // Filter by product name
     if (product) {
+      // Find all sales where the product name exists as a key in the products map
       filter[`products.${product}`] = { $exists: true };
     }
 
     // Execute query with filters
     const sales = await Sale.find(filter)
       .populate('retailer')
-      .populate('addedBy', 'name email')
+      .populate('addedBy', '_id name email contactNo contactNo2 verified')
       .sort({ createdAt: -1 });
 
     console.log('\n::[GET FILTERED SALES]');
@@ -304,6 +291,35 @@ exports.getFilteredSales = async (req, res) => {
     console.log('::[ERROR] Get filtered sales error:', {
       error: error.message,
       stack: error.stack
+    });
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getSale = async (req, res) => {
+  try {
+    const sale = await Sale.findOne({ _id: req.params.id, addedBy: req.salesman._id })
+      .populate('retailer')
+      .populate('addedBy', '_id name email contactNo contactNo2 verified');
+
+    if (!sale) {
+      console.log('::[ERROR] Sale not found');
+      return res.status(404).json({ message: 'Sale not found' });
+    }
+
+    const productDetails = Object.entries(sale.products)
+      .map(([productId, details]) => `${productId}: ${details.quantity} units @ $${details.price} each`)
+      .join(', ');
+
+    console.log(`\n::[GET SALE] ID: ${sale._id}`);
+    console.log(`Products: ${productDetails}, Total Amount: ${sale.amount}, Coordinates: [${sale.coordinates?.coordinates}]`);
+
+    res.json(sale);
+  } catch (error) {
+    console.log('::[ERROR] Get sale error:', {
+      error: error.message,
+      stack: error.stack,
+      id: req.params.id
     });
     res.status(500).json({ message: error.message });
   }
