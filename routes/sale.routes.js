@@ -13,6 +13,7 @@ router.put('/:id', auth, saleController.updateSale);
 
 // Admin specific routes
 router.get('/admin/all', saleController.getAllSales); // Add auth if needed
+router.get('/admin/filtered', saleController.getFilteredSales);
 router.delete('/admin/:id', saleController.adminDeleteSale); // Add auth if needed
 
 module.exports = router; 

@@ -1,4 +1,7 @@
 const Sale = require('../models/sale.model');
+const Retailer = require('../models/retailer.model');
+const Product = require('../models/product.model');
+const Salesman = require('../models/salesman.model');
 
 exports.createSale = async (req, res) => {
   try {
@@ -251,6 +254,59 @@ exports.adminDeleteSale = async (req, res) => {
   }
 };
 
-const Salesman = require('../models/salesman.model');
+exports.getFilteredSales = async (req, res) => {
+  try {
+    const {
+      salesman,
+      product,
+      retailer,
+      startDate,
+      endDate
+    } = req.query;
+
+    // Build filter object
+    const filter = {};
+    
+    // Date range filter
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+
+    // Filter by IDs
+    if (retailer) filter.retailer = retailer;
+    if (salesman) filter.addedBy = salesman;
+    
+    // Filter by product - using $exists to check if the product exists in the products Map
+    if (product) {
+      filter[`products.${product}`] = { $exists: true };
+    }
+
+    // Execute query with filters
+    const sales = await Sale.find(filter)
+      .populate('retailer')
+      .populate('addedBy', 'name email')
+      .sort({ createdAt: -1 });
+
+    console.log('\n::[GET FILTERED SALES]');
+    console.log('Filters applied:', {
+      salesman,
+      product,
+      retailer,
+      startDate,
+      endDate
+    });
+    console.log(`Found ${sales.length} sales matching the criteria`);
+
+    res.json(sales);
+  } catch (error) {
+    console.log('::[ERROR] Get filtered sales error:', {
+      error: error.message,
+      stack: error.stack
+    });
+    res.status(500).json({ message: error.message });
+  }
+};
 
 
