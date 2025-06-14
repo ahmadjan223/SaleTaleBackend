@@ -124,7 +124,7 @@ exports.updateRetailer = async (req, res) => {
 
     const updateData = req.body;
     const retailer = await Retailer.findOneAndUpdate(
-      { _id: req.params.id, addedBy: req.salesman._id},
+      { _id: req.params.id},
       updateData,
       { new: true, runValidators: true }
     )
@@ -136,7 +136,7 @@ exports.updateRetailer = async (req, res) => {
       return res.status(404).json({ message: 'Retailer not found or access denied' });
     }
 
-    console.log(`[${retailer.retailerName}, ${retailer.shopName}, [${retailer.location.coordinates}], Added by: ${req.salesman.email}]`);
+    console.log(`[${retailer.retailerName}, ${retailer.shopName}, [${retailer.location.coordinates}], Assigned to: ${req.salesman.email}]`);
 
     res.json(retailer);
   } catch (error) {
