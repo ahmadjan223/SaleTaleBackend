@@ -37,7 +37,11 @@ const retailerSchema = new mongoose.Schema({
       required: true
     }
   },
-  addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Salesman', required: true },
+  assignedSalesman: { type: mongoose.Schema.Types.ObjectId, ref: 'Salesman', required: true },
+  addedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true
+  },
   active: {
     type: Boolean,
     default: true

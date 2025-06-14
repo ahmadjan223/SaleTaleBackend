@@ -4,11 +4,9 @@ exports.createProduct = async (req, res) => {
   try {
     console.log('Received request to create product with data:', req.body);
 
-    // Set both addedBy and assignedSalesman to the current user's ID
     const productData = {
       ...req.body,
-      addedBy: req.user._id,
-      assignedSalesman: req.user._id
+      active: true // Set default active status
     };
 
     const product = new Product(productData);
@@ -16,10 +14,17 @@ exports.createProduct = async (req, res) => {
 
     console.log('Product saved successfully:', product);
 
-    res.status(201).json(product);
+    res.status(201).json({
+      success: true,
+      message: 'Product created successfully',
+      data: product
+    });
   } catch (error) {
     console.error('Error creating product:', error.message);
-    res.status(400).json({ message: error.message });
+    res.status(400).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
 
@@ -105,11 +110,8 @@ exports.updateProduct = async (req, res) => {
     const productId = req.params.id;
     console.log('Received request to update product with ID:', productId, 'Data:', req.body);
 
-    // Set both addedBy and assignedSalesman to the current user's ID
     const updateData = {
-      ...req.body,
-      addedBy: req.user._id,
-      assignedSalesman: req.user._id
+      ...req.body
     };
 
     const updatedProduct = await Product.findByIdAndUpdate(
@@ -120,14 +122,24 @@ exports.updateProduct = async (req, res) => {
 
     if (!updatedProduct) {
       console.warn('Product not found for update, ID:', productId);
-      return res.status(404).json({ message: 'Product not found' });
+      return res.status(404).json({ 
+        success: false,
+        message: 'Product not found' 
+      });
     }
 
     console.log('Product updated successfully:', updatedProduct);
-    res.json(updatedProduct);
+    res.json({
+      success: true,
+      message: 'Product updated successfully',
+      data: updatedProduct
+    });
   } catch (error) {
     console.error('Error updating product:', error.message);
-    res.status(400).json({ message: error.message });
+    res.status(400).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
 

@@ -7,8 +7,9 @@ exports.getRetailers = async (req, res) => {
     console.log(`\n[GET RETAILERS] AddedBy: ${userId}`);
 
     const retailers = await Retailer.find({ addedBy: userId })
-      .select('retailerName shopName contactNo contactNo2 address location createdAt addedBy active')
-      .populate('addedBy', 'name email contactNo active');
+      .select('retailerName shopName contactNo contactNo2 address location createdAt addedBy active assignedSalesman')
+      .populate('addedBy', 'name email contactNo active')
+      .populate('assignedSalesman', 'name email contactNo active');
 
     retailers.forEach(r => {
       console.log(`[${r.retailerName}, ${r.shopName}, ${r.contactNo}, ${r.contactNo2}, ${r.address}, [${r.location.coordinates}], Added by: ${req.salesman.email}]`);
@@ -26,8 +27,9 @@ exports.getAllRetailers = async (req, res) => {
     console.log(`\n[GET ALL RETAILERS]`);
 
     const retailers = await Retailer.find({})
-      .select('retailerName shopName contactNo contactNo2 address location createdAt addedBy active')
-      .populate('addedBy', 'name email contactNo active');
+      .select('retailerName shopName contactNo contactNo2 address location createdAt addedBy active assignedSalesman')
+      .populate('addedBy', 'name email contactNo active')
+      .populate('assignedSalesman', 'name email contactNo active');
 
     retailers.forEach(r => {
       console.log(`[${r.retailerName}, ${r.shopName}, [${r.location.coordinates}]]`);
@@ -51,7 +53,7 @@ exports.createRetailer = async (req, res) => {
     }
 
     // Destructure necessary fields from the request body
-    const { retailerName, shopName, contactNo, contactNo2, address, location } = req.body;
+    const { retailerName, shopName, contactNo, contactNo2, address, location, assignedSalesman } = req.body;
 
     // Check for missing required fields
     if (!retailerName || !shopName || !contactNo || !address || !location || !location.coordinates) {
@@ -62,10 +64,19 @@ exports.createRetailer = async (req, res) => {
       });
     }
 
-    // Create a new retailer object and assign the addedBy field with the salesman ID
+    // Create a new retailer object
     const retailer = new Retailer({
-      ...req.body,
-      addedBy: req.salesman._id // Use req.salesman (the salesman object set in the auth middleware)
+      retailerName,
+      shopName,
+      contactNo,
+      contactNo2,
+      address,
+      location,
+      // If assignedSalesman is provided (admin case), use that for both fields
+      // Otherwise (salesman case), use the current salesman's ID for both fields
+      assignedSalesman: assignedSalesman || req.salesman._id,
+      addedBy: assignedSalesman || req.salesman._id,
+      active: true
     });
 
     // Save the retailer to the database
@@ -89,8 +100,9 @@ exports.getRetailerById = async (req, res) => {
     const retailer = await Retailer.findOne({
       _id: req.params.id,
       addedBy: req.salesman._id
-    }).select('retailerName shopName contactNo contactNo2 address location createdAt addedBy active')
-      .populate('addedBy', 'name email contactNo active');
+    }).select('retailerName shopName contactNo contactNo2 address location createdAt addedBy active assignedSalesman')
+      .populate('addedBy', 'name email contactNo active')
+      .populate('assignedSalesman', 'name email contactNo active');
 
     if (!retailer) {
       console.log('[ERROR] Retailer not found or access denied');
@@ -115,7 +127,9 @@ exports.updateRetailer = async (req, res) => {
       { _id: req.params.id, addedBy: req.salesman._id},
       updateData,
       { new: true, runValidators: true }
-    ).populate('addedBy', 'name email contactNo active');
+    )
+    .populate('addedBy', 'name email contactNo active')
+    .populate('assignedSalesman', 'name email contactNo active');
 
     if (!retailer) {
       console.log('[ERROR] Retailer not found or not authorized to update');
@@ -337,6 +351,7 @@ exports.adminCreateRetailer = async (req, res) => {
       contactNo2,
       address,
       location,
+      assignedSalesman,
       addedBy: assignedSalesman, // Set addedBy to the assigned salesman
       active: true
     });
@@ -382,6 +397,7 @@ exports.adminUpdateRetailer = async (req, res) => {
       contactNo2,
       address,
       location,
+      assignedSalesman,
       addedBy: assignedSalesman, // Update the assigned salesman
       active: active !== undefined ? active : true
     };
@@ -405,5 +421,28 @@ exports.adminUpdateRetailer = async (req, res) => {
   } catch (error) {
     console.log('[ERROR]', error.message);
     res.status(400).json({ message: error.message });
+  }
+};
+
+// Get retailers by salesman ID
+exports.getRetailersBySalesman = async (req, res) => {
+  try {
+    console.log('\n[GET RETAILERS BY SALESMAN]');
+    const userId = req.salesman._id;
+    console.log(`[SALESMAN ID: ${userId}]`);
+
+    const retailers = await Retailer.find({ addedBy: userId })
+      .select('retailerName shopName contactNo contactNo2 address location createdAt addedBy active assignedSalesman')
+      .populate('addedBy', 'name email contactNo active')
+      .populate('assignedSalesman', 'name email contactNo active');
+
+    retailers.forEach(r => {
+      console.log(`[${r.retailerName}, ${r.shopName}, [${r.location.coordinates}]]`);
+    });
+
+    res.json(retailers);
+  } catch (error) {
+    console.log('[ERROR]', error.message);
+    res.status(500).json({ message: error.message });
   }
 };

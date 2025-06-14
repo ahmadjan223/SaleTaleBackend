@@ -7,8 +7,8 @@ router.get('/', productController.getProducts);
 router.get('/:id', productController.getProductById);
 
 // Admin routes (without auth for now)
-router.post('/', productController.createProduct);
-router.put('/:id', productController.updateProduct);
+router.post('/admin/create', productController.createProduct);
+router.put('/admin/:id', productController.updateProduct);
 router.delete('/admin/:id', productController.adminDeleteProduct);
 router.get('/admin/all', productController.getAllProducts);
 router.get('/admin/:id', productController.adminGetProductById);

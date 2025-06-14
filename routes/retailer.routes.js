@@ -24,6 +24,10 @@ router.put('/admin/:id', retailerController.adminUpdateRetailer);
 
 // Admin delete retailer - uses DELETE method
 router.delete('/admin/:id', retailerController.adminDeleteRetailer); // Similarly, add auth if needed: auth, retailerController.adminDeleteRetailer
+
+// Admin toggle retailer status
+router.put('/admin/:id/status', retailerController.toggleRetailerStatus);
+
 // Ensure this route exists for fetching specific retailer details by ID for admin purposes
 router.get('/admin/details/:id', retailerController.adminGetRetailerById); // Assuming adminGetRetailerById is the correct controller function name
 

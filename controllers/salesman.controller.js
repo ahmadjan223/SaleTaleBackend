@@ -477,6 +477,149 @@ exports.update = async (req, res) => {
       error: error.message
     });
   }
+};
+
+// Admin Create Salesman
+exports.adminCreateSalesman = async (req, res) => {
+  try {
+    console.log('\n[ADMIN CREATE SALESMAN] Request Body:', req.body);
+    const {
+      firstName,
+      lastName,
+      contactNo,
+      contactNo2,
+      email,
+      password
+    } = req.body;
+
+    // Validate required fields
+    if (!firstName || !lastName || !contactNo || !email || !password) {
+      console.log('[ERROR] Missing required fields');
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields',
+        required: ['firstName', 'lastName', 'contactNo', 'email', 'password']
+      });
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      console.log('[ERROR] Password too short');
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long'
+      });
+    }
+
+    // Check if salesman already exists
+    const existingSalesman = await Salesman.findOne({ email });
+    if (existingSalesman) {
+      console.log('[ERROR] Email already registered:', email);
+      return res.status(400).json({
+        success: false,
+        message: 'Email already registered'
+      });
+    }
+
+    // Create new salesman
+    const salesman = new Salesman({
+      firstName,
+      lastName,
+      name: `${firstName} ${lastName}`,
+      contactNo,
+      contactNo2,
+      email,
+      password,
+      active: true
+    });
+
+    console.log('[ADMIN CREATE SALESMAN] Salesman object:', salesman);
+
+    // Save salesman
+    await salesman.save();
+    console.log('[ADMIN CREATE SALESMAN] Salesman saved successfully');
+
+    // Remove password from response
+    const salesmanResponse = salesman.toObject();
+    delete salesmanResponse.password;
+
+    res.status(201).json({
+      success: true,
+      message: 'Salesman created successfully by admin',
+      data: salesmanResponse
+    });
+
+  } catch (error) {
+    console.error('[ERROR] Admin create salesman error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      validationErrors: error.errors
+    });
+    res.status(500).json({
+      success: false,
+      message: 'Error creating salesman',
+      error: error.message,
+      validationErrors: error.errors
+    });
+  }
+};
+
+// Admin Update Salesman
+exports.adminUpdateSalesman = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    console.log(`\n[ADMIN UPDATE SALESMAN] ID: ${id}, Update Data:`, updateData);
+
+    // Don't allow updating certain fields
+    delete updateData.password;
+    delete updateData.id;
+    delete updateData.email; // Email should be updated through a separate endpoint
+    delete updateData.verified;
+
+    // If name fields are updated, update the full name
+    if (updateData.firstName || updateData.lastName) {
+      const salesman = await Salesman.findById(id);
+      if (!salesman) {
+        console.log('[ERROR] Salesman not found for update');
+        return res.status(404).json({
+          success: false,
+          message: 'Salesman not found'
+        });
+      }
+      updateData.name = `${updateData.firstName || salesman.firstName} ${updateData.lastName || salesman.lastName}`;
+    }
+
+    const updatedSalesman = await Salesman.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!updatedSalesman) {
+      console.log('[ERROR] Salesman not found after update attempt');
+      return res.status(404).json({
+        success: false,
+        message: 'Salesman not found'
+      });
+    }
+
+    console.log(`[ADMIN] Updated Salesman: [${updatedSalesman.name}, ${updatedSalesman.email}]`);
+    res.status(200).json({
+      success: true,
+      message: 'Salesman updated successfully',
+      data: updatedSalesman
+    });
+
+  } catch (error) {
+    console.error('[ERROR] Admin update salesman error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating salesman',
+      error: error.message
+    });
+  }
 }; 
 
 
