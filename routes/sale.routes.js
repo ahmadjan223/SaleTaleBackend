@@ -9,6 +9,7 @@ router.get('/', auth, saleController.getSales);
 router.get('/retailer/:retailerId', auth, saleController.getRetailerSales);
 router.get('/:id', auth, saleController.getSale);
 router.put('/:id', auth, saleController.updateSale);
+router.delete('/:id', auth, saleController.deleteSale);
 
 // Admin routes (without auth for now)
 router.get('/admin/all', saleController.getAllSales);

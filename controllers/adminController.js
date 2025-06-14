@@ -65,8 +65,20 @@ const getAdminProfile = async (req, res) => {
     res.json(req.admin);
 };
 
+// Admin logout
+const logoutAdmin = async (req, res) => {
+    try {
+        // The token is already validated by the adminAuth middleware
+        // We just need to send a success response
+        res.json({ message: 'Logout successful' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 module.exports = {
     setupAdmin,
     loginAdmin,
-    getAdminProfile
+    getAdminProfile,
+    logoutAdmin
 }; 

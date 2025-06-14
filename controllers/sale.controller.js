@@ -143,18 +143,35 @@ exports.deleteSale = async (req, res) => {
       return res.status(400).json({ message: 'Sale ID is required' });
     }
 
-    const sale = await Sale.findByIdAndDelete({ _id: saleId, addedBy: req.salesman._id });
+    // First find the sale with populated fields
+    const sale = await Sale.findOne({ _id: saleId, addedBy: req.salesman._id })
+      .populate('addedBy', 'name email')
+      .populate('retailer', 'retailerName shopName');
 
     if (!sale) {
       console.log('::[ERROR] Sale not found for deletion, ID:', saleId);
       return res.status(404).json({ message: 'Sale not found' });
     }
 
-    const productDetails = Object.entries(sale.products)
-      .map(([productId, details]) => `${productId}: ${details.quantity} units @ $${details.price} each`)
+    // Store sale details for logging before deletion
+    const saleDetails = {
+      id: sale._id,
+      email: sale.addedBy?.email,
+      products: sale.products,
+      amount: sale.amount,
+      createdBy: sale.addedBy?._id,
+      createdAt: sale.createdAt,
+      coordinates: sale.coordinates?.coordinates
+    };
+
+    // Now delete the sale
+    await Sale.findByIdAndDelete(saleId);
+
+    const productDetails = Object.entries(saleDetails.products)
+      .map(([productName, details]) => `${productName}: ${details.quantity} units @ ${details.price} each`)
       .join(', ');
 
-    console.log(`::[DELETED] Sale ID: ${sale._id} @ ${sale.addedBy.email}, Products: ${productDetails}, Total Amount: ${sale.amount}, Created by: ${sale.addedBy}, Created: ${sale.createdAt}, Coordinates: [${sale.coordinates?.coordinates}]`);
+    console.log(`::[DELETED] Sale ID: ${saleDetails.id} @ ${saleDetails.email}, Products: ${productDetails}, Total Amount: ${saleDetails.amount}, Created by: ${saleDetails.createdBy}, Created: ${saleDetails.createdAt}, Coordinates: [${saleDetails.coordinates}]`);
     res.json({ message: 'Sale deleted successfully' });
   } catch (error) {
     console.log('::[ERROR] Delete sale error:', {

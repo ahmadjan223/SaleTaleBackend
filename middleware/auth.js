@@ -14,8 +14,8 @@ const auth = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
     console.log('Decoded Token:', decoded);  // Add a log to check the token content
     
-    // Find salesman by googleId
-    const salesman = await Salesman.findOne({ googleId: decoded.googleId });
+    // Find salesman by _id from token
+    const salesman = await Salesman.findById(decoded._id);
     console.log('Salesman found:', salesman);  // Log the found salesman to ensure it is correct
     
     if (!salesman) {

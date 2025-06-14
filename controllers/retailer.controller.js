@@ -4,15 +4,15 @@ const Sale = require('../models/sale.model');
 exports.getRetailers = async (req, res) => {
   try {
     const userId = req.salesman._id;
-    console.log(`\n[GET RETAILERS] AddedBy: ${userId}`);
+    console.log(`\n[GET RETAILERS] Assigned Salesman: ${userId}`);
 
-    const retailers = await Retailer.find({ addedBy: userId })
+    const retailers = await Retailer.find({ assignedSalesman: userId })
       .select('retailerName shopName contactNo contactNo2 address location createdAt addedBy active assignedSalesman')
       .populate('addedBy', 'name email contactNo active')
       .populate('assignedSalesman', 'name email contactNo active');
 
     retailers.forEach(r => {
-      console.log(`[${r.retailerName}, ${r.shopName}, ${r.contactNo}, ${r.contactNo2}, ${r.address}, [${r.location.coordinates}], Added by: ${req.salesman.email}]`);
+      console.log(`[${r.retailerName}, ${r.shopName}, ${r.contactNo}, ${r.contactNo2}, ${r.address}, [${r.location.coordinates}], Assigned to: ${req.salesman.email}]`);
     });
 
     res.json(retailers);
@@ -63,7 +63,7 @@ exports.createRetailer = async (req, res) => {
         required: ['retailerName', 'shopName', 'contactNo', 'address', 'location (with coordinates: [longitude, latitude])']
       });
     }
-
+    console.log("id of salesman decoder from jwt token", req.salesman._id)
     // Create a new retailer object
     const retailer = new Retailer({
       retailerName,
