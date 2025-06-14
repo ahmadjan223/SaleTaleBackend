@@ -331,7 +331,6 @@ exports.adminCreateRetailer = async (req, res) => {
   try {
     console.log('\n[ADMIN CREATE RETAILER]');
 
-    // Destructure necessary fields from the request body
     const { retailerName, shopName, contactNo, contactNo2, address, location, assignedSalesman } = req.body;
 
     // Check for missing required fields
@@ -339,11 +338,11 @@ exports.adminCreateRetailer = async (req, res) => {
       console.log('[ERROR] Missing required fields');
       return res.status(400).json({
         message: 'Missing required fields',
-        required: ['retailerName', 'shopName', 'contactNo', 'address', 'location (with coordinates: [longitude, latitude])', 'assignedSalesman']
+        required: ['retailerName', 'shopName', 'contactNo', 'address', 'location (with coordinates)', 'assignedSalesman']
       });
     }
 
-    // Create a new retailer object with the assigned salesman
+    // Create a new retailer object
     const retailer = new Retailer({
       retailerName,
       shopName,
@@ -351,21 +350,15 @@ exports.adminCreateRetailer = async (req, res) => {
       contactNo2,
       address,
       location,
-      assignedSalesman,
-      addedBy: assignedSalesman, // Set addedBy to the assigned salesman
+      assignedSalesman, // The salesman who will manage this retailer
+      addedBy: req.admin._id, // Set addedBy to admin's ID
       active: true
     });
 
-    // Save the retailer to the database
     await retailer.save();
 
-    // Populate the addedBy field to get salesman details
-    await retailer.populate('addedBy', 'name email contactNo active');
+    console.log(`[ADMIN] Created retailer: [${retailer.retailerName}, ${retailer.shopName}, ${retailer.contactNo}, ${retailer.address}, [${retailer.location.coordinates}], Added by Admin: ${req.admin._id}, Assigned to salesman ID: ${assignedSalesman}]`);
 
-    // Log the retailer details for debugging
-    console.log(`[ADMIN] Created retailer: [${retailer.retailerName}, ${retailer.shopName}, ${retailer.contactNo}, ${retailer.address}, [${retailer.location.coordinates}], Assigned to: ${retailer.addedBy.email}]`);
-
-    // Send the retailer data as the response
     res.status(201).json(retailer);
   } catch (error) {
     console.log('[ERROR]', error.message);
@@ -378,46 +371,49 @@ exports.adminUpdateRetailer = async (req, res) => {
   try {
     console.log('\n[ADMIN UPDATE RETAILER]', req.params.id);
 
-    const { retailerName, shopName, contactNo, contactNo2, address, location, assignedSalesman, active } = req.body;
-
-    // Check for missing required fields
-    if (!retailerName || !shopName || !contactNo || !address || !location || !location.coordinates || !assignedSalesman) {
-      console.log('[ERROR] Missing required fields');
-      return res.status(400).json({
-        message: 'Missing required fields',
-        required: ['retailerName', 'shopName', 'contactNo', 'address', 'location (with coordinates: [longitude, latitude])', 'assignedSalesman']
-      });
-    }
-
-    // Create update data object
-    const updateData = {
-      retailerName,
-      shopName,
-      contactNo,
-      contactNo2,
-      address,
-      location,
-      assignedSalesman,
-      addedBy: assignedSalesman, // Update the assigned salesman
-      active: active !== undefined ? active : true
-    };
-
-    // Find and update the retailer
-    const retailer = await Retailer.findByIdAndUpdate(
-      req.params.id,
+    const updateData = req.body;
+    const retailer = await Retailer.findOneAndUpdate(
+      { _id: req.params.id },
       updateData,
       { new: true, runValidators: true }
-    ).populate('addedBy', 'name email contactNo active');
+    )
+    .populate('addedBy', 'name email contactNo active')
+    .populate('assignedSalesman', 'name email contactNo active');
 
     if (!retailer) {
-      console.log('[ERROR] Retailer not found for update');
+      console.log('[ERROR] Retailer not found');
       return res.status(404).json({ message: 'Retailer not found' });
     }
 
-    // Log the updated retailer details
-    console.log(`[ADMIN] Updated retailer: [${retailer.retailerName}, ${retailer.shopName}, ${retailer.contactNo}, ${retailer.address}, [${retailer.location.coordinates}], Assigned to: ${retailer.addedBy.email}]`);
+    console.log(`[ADMIN] Updated retailer: [${retailer.retailerName}, ${retailer.shopName}, [${retailer.location.coordinates}]]`);
 
     res.json(retailer);
+  } catch (error) {
+    console.log('[ERROR]', error.message);
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// Admin Toggle Retailer Status
+exports.toggleRetailerStatus = async (req, res) => {
+  try {
+    console.log('\n[ADMIN TOGGLE RETAILER STATUS]', req.params.id);
+
+    const retailer = await Retailer.findById(req.params.id);
+    if (!retailer) {
+      console.log('[ERROR] Retailer not found');
+      return res.status(404).json({ message: 'Retailer not found' });
+    }
+
+    retailer.active = !retailer.active;
+    await retailer.save();
+
+    console.log(`[ADMIN] Toggled retailer status: [${retailer.retailerName}, ${retailer.shopName}, Active: ${retailer.active}]`);
+
+    res.json({
+      message: `Retailer ${retailer.active ? 'activated' : 'deactivated'} successfully`,
+      retailer
+    });
   } catch (error) {
     console.log('[ERROR]', error.message);
     res.status(400).json({ message: error.message });

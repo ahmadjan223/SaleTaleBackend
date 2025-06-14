@@ -9,6 +9,7 @@ const retailerRoutes = require('./routes/retailer.routes');
 const productRoutes = require('./routes/product.routes');
 const saleRoutes = require('./routes/sale.routes');
 const salesmanRoutes = require('./routes/salesman.routes');
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 
@@ -68,6 +69,7 @@ app.use('/api/retailers', retailerRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/sales', saleRoutes);
 app.use('/api/salesmen', salesmanRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

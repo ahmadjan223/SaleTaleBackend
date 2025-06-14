@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const salesmanController = require('../controllers/salesman.controller');
 const auth = require('../middleware/auth'); // You'll need to create this middleware
-// const adminAuth = require('../middleware/adminAuth'); // Optional
+const adminAuth = require('../middleware/adminAuth');
 
 // Public routes
 router.post('/register', salesmanController.register);
@@ -14,16 +14,16 @@ router.get('/inactive', auth, salesmanController.getInactiveSalesmen);
 router.post('/logout', auth, salesmanController.logoutSalesman);
 router.delete('/:id', auth, salesmanController.deleteSalesman);
 
-// Admin specific routes
-router.get('/admin/all', salesmanController.getAllSalesmen);
+// Admin specific routes (require adminAuth)
+router.get('/admin/all', adminAuth, salesmanController.getAllSalesmen);
 // Admin delete salesman uses _id in param, not googleId like the other delete route
-router.delete('/admin/:id', salesmanController.adminDeleteSalesman);
-router.get('/admin/details/:id', salesmanController.adminGetSalesmanById);
+router.delete('/admin/:id', adminAuth, salesmanController.adminDeleteSalesman);
+router.get('/admin/details/:id', adminAuth, salesmanController.adminGetSalesmanById);
 // Admin create and update salesman
-router.post('/admin/create', salesmanController.adminCreateSalesman);
-router.put('/admin/:id', salesmanController.adminUpdateSalesman);
+router.post('/admin/create', adminAuth, salesmanController.adminCreateSalesman);
+router.put('/admin/:id', adminAuth, salesmanController.adminUpdateSalesman);
 // Admin toggle salesman status
-router.put('/admin/:id/status', salesmanController.toggleSalesmanStatus);
+router.put('/admin/:id/status', adminAuth, salesmanController.toggleSalesmanStatus);
 
 // Update salesman details (protected route)
 router.put('/:id', auth, salesmanController.update);
