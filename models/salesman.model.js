@@ -38,6 +38,11 @@ const SalesmanSchema = new mongoose.Schema({
     required: true,
     minlength: 6
   },
+  franchise: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Franchise',
+    default: null
+  },
   active: {
     type: Boolean,
     default: true

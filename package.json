@@ -2,10 +2,13 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
+  "main": "api/index.js",
   "scripts": {
-    "start": "node server.js",
-    "server": "nodemon --legacy-watch server.js",
+    "start": "node start.js",
+    "dev": "nodemon --legacy-watch api/index.js --ignore 'node_modules/' --ignore '.git/'",
+    "dev:debug": "nodemon --legacy-watch api/index.js --inspect",
+    "server": "node api/index.js",
+    "lint": "eslint .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
