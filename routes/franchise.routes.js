@@ -10,6 +10,9 @@ router.get('/admin/:id', adminAuth, franchiseController.getFranchiseById);
 router.put('/admin/:id', adminAuth, franchiseController.updateFranchise);
 router.delete('/admin/:id', adminAuth, franchiseController.deleteFranchise);
 
+// Toggle franchise status
+router.put('/admin/:id/toggle-status', adminAuth, franchiseController.toggleFranchiseStatus);
+
 // Get all salesmen of a franchise (admin only)
 router.get('/admin/:id/salesmen', adminAuth, franchiseController.getFranchiseSalesmen);
 

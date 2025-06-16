@@ -211,4 +211,41 @@ exports.getFranchiseSalesmen = async (req, res) => {
       message: 'Error fetching franchise salesmen'
     });
   }
+};
+
+// Toggle franchise status
+exports.toggleFranchiseStatus = async (req, res) => {
+  try {
+    const franchiseId = req.params.id;
+    const { active } = req.body;
+
+    const franchise = await Franchise.findByIdAndUpdate(
+      franchiseId,
+      { active },
+      { new: true, runValidators: true }
+    );
+
+    if (!franchise) {
+      return res.status(404).json({
+        error: 'Not Found',
+        message: 'Franchise not found'
+      });
+    }
+
+    res.json({
+      message: 'Franchise status updated successfully',
+      data: franchise
+    });
+  } catch (error) {
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        error: 'Invalid ID',
+        message: 'Invalid franchise ID format'
+      });
+    }
+    res.status(500).json({
+      error: 'Server Error',
+      message: 'Error updating franchise status'
+    });
+  }
 }; 

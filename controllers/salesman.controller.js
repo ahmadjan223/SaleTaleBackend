@@ -160,7 +160,9 @@ exports.getActiveSalesmen = async (req, res) => {
 
 exports.getAllSalesmen = async (req, res) => {
   try {
-    const salesmen = await Salesman.find({}).select('-password');
+    const salesmen = await Salesman.find({})
+      .select('-password')
+      .populate('franchise', 'name address masterSimNo active');
     console.log('[GET ALL SALESMEN]');
     salesmen.forEach(salesman => {
       console.log(`[${salesman.name} ${salesman.email}]`);
@@ -344,7 +346,9 @@ exports.adminGetSalesmanById = async (req, res) => {
     console.log(`\n[ADMIN GET SALESMAN BY ID] ID: ${salesmanId}`);
 
     // Select fields relevant for a tooltip or quick view, e.g., name, email, phone, verified
-    const salesman = await Salesman.findById(salesmanId).select('name email phone verified _id');
+    const salesman = await Salesman.findById(salesmanId)
+      .select('-password')
+      .populate('franchise', 'name address masterSimNo active');
 
     if (!salesman) {
       console.log('[ERROR] Salesman not found for admin view by ID');
@@ -489,7 +493,8 @@ exports.adminCreateSalesman = async (req, res) => {
       contactNo,
       contactNo2,
       email,
-      password
+      password,
+      franchise
     } = req.body;
 
     // Validate required fields
@@ -530,7 +535,8 @@ exports.adminCreateSalesman = async (req, res) => {
       contactNo2,
       email,
       password,
-      active: true
+      active: true,
+      ...(franchise && { franchise }) // Only include franchise if it exists
     });
 
     console.log('[ADMIN CREATE SALESMAN] Salesman object:', salesman);
@@ -589,6 +595,11 @@ exports.adminUpdateSalesman = async (req, res) => {
         });
       }
       updateData.name = `${updateData.firstName || salesman.firstName} ${updateData.lastName || salesman.lastName}`;
+    }
+
+    // Ensure franchise is included in the update if provided
+    if (updateData.franchise) {
+      updateData.franchise = updateData.franchise;
     }
 
     const updatedSalesman = await Salesman.findByIdAndUpdate(

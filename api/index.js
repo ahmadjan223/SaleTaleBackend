@@ -91,7 +91,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/sales', saleRoutes);
 app.use('/api/salesmen', salesmanRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/franchise', franchiseRoutes);
+app.use('/api/franchises', franchiseRoutes);
 
 // Welcome route
 app.get('/', (req, res) => {
