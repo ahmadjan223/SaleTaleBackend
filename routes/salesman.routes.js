@@ -16,6 +16,7 @@ router.delete('/:id', auth, salesmanController.deleteSalesman);
 
 // Admin specific routes (require adminAuth)
 router.get('/admin/all', adminAuth, salesmanController.getAllSalesmen);
+router.get('/admin/filtered', adminAuth, salesmanController.getFilteredSalesmen);
 // Admin delete salesman uses _id in param, not googleId like the other delete route
 router.delete('/admin/:id', adminAuth, salesmanController.adminDeleteSalesman);
 router.get('/admin/details/:id', adminAuth, salesmanController.adminGetSalesmanById);

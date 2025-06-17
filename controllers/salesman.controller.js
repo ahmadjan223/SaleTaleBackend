@@ -631,6 +631,84 @@ exports.adminUpdateSalesman = async (req, res) => {
       error: error.message
     });
   }
+};
+
+// Get filtered salesmen
+exports.getFilteredSalesmen = async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      contactNo,
+      franchise,
+      active,
+      startDate,
+      endDate
+    } = req.query;
+
+    // Build filter object
+    const filter = {};
+    
+    // Text search filters
+    if (name) {
+      filter.$or = [
+        { firstName: { $regex: name, $options: 'i' } },
+        { lastName: { $regex: name, $options: 'i' } },
+        { name: { $regex: name, $options: 'i' } }
+      ];
+    }
+    
+    if (email) {
+      filter.email = { $regex: email, $options: 'i' };
+    }
+    
+    if (contactNo) {
+      filter.contactNo = { $regex: contactNo, $options: 'i' };
+    }
+
+    // Franchise filter
+    if (franchise) {
+      filter.franchise = franchise;
+    }
+
+    // Active status filter
+    if (active !== undefined) {
+      filter.active = active === 'true';
+    }
+    
+    // Date range filter
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+
+    // Execute query with filters
+    const salesmen = await Salesman.find(filter)
+      .select('-password')
+      .populate('franchise', 'name address masterSimNo active')
+      .sort({ createdAt: -1 });
+
+    console.log('\n::[GET FILTERED SALESMEN]');
+    console.log('Filters applied:', {
+      name,
+      email,
+      contactNo,
+      franchise,
+      active,
+      startDate,
+      endDate
+    });
+    console.log(`Found ${salesmen.length} salesmen matching the criteria`);
+
+    res.json(salesmen);
+  } catch (error) {
+    console.log('::[ERROR] Get filtered salesmen error:', {
+      error: error.message,
+      stack: error.stack
+    });
+    res.status(500).json({ message: error.message });
+  }
 }; 
 
 

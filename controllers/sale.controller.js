@@ -2,6 +2,23 @@ const Sale = require('../models/sale.model');
 const Retailer = require('../models/retailer.model');
 const Product = require('../models/product.model');
 const Salesman = require('../models/salesman.model');
+const { MAX_SALE_DISTANCE, COORDINATE_DECIMAL_PLACES } = require('../config/constants');
+
+// Function to calculate distance between two coordinates in meters
+const calculateDistance = (coord1, coord2) => {
+  const R = 6371e3; // Earth's radius in meters
+  const φ1 = coord1[1] * Math.PI / 180; // latitude 1 in radians
+  const φ2 = coord2[1] * Math.PI / 180; // latitude 2 in radians
+  const Δφ = (coord2[1] - coord1[1]) * Math.PI / 180; // difference in latitude
+  const Δλ = (coord2[0] - coord1[0]) * Math.PI / 180; // difference in longitude
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // distance in meters
+};
 
 exports.createSale = async (req, res) => {
   try {
@@ -21,16 +38,48 @@ exports.createSale = async (req, res) => {
       });
     }
 
+    // Get retailer coordinates for distance validation
+    let isValid = false;
+    let distance = null;
+    
+    try {
+      const retailerDoc = await Retailer.findById(retailer);
+      if (retailerDoc && retailerDoc.location && retailerDoc.location.coordinates) {
+        const retailerCoords = retailerDoc.location.coordinates;
+        const saleCoords = coordinates.coordinates;
+        
+        // Calculate distance between retailer and sale location
+        distance = calculateDistance(retailerCoords, saleCoords);
+        
+        // Set valid to true if distance is less than MAX_SALE_DISTANCE
+        isValid = distance <= MAX_SALE_DISTANCE;
+        
+        console.log(`[DISTANCE CALCULATION] Retailer: ${retailerDoc.retailerName || retailerDoc.shopName}`);
+        console.log(`[DISTANCE CALCULATION] Retailer coordinates: [${retailerCoords.map(coord => coord.toFixed(COORDINATE_DECIMAL_PLACES))}]`);
+        console.log(`[DISTANCE CALCULATION] Sale coordinates: [${saleCoords.map(coord => coord.toFixed(COORDINATE_DECIMAL_PLACES))}]`);
+        console.log(`[DISTANCE CALCULATION] Distance: ${distance.toFixed(COORDINATE_DECIMAL_PLACES)} meters`);
+        console.log(`[DISTANCE CALCULATION] Valid: ${isValid} (${distance <= MAX_SALE_DISTANCE ? `Within ${MAX_SALE_DISTANCE}m` : `Beyond ${MAX_SALE_DISTANCE}m`})`);
+      } else {
+        console.log(`[DISTANCE CALCULATION] Retailer ${retailer} has no coordinates, setting valid to false`);
+        isValid = false;
+      }
+    } catch (error) {
+      console.log(`[DISTANCE CALCULATION] Error calculating distance: ${error.message}`);
+      isValid = false;
+    }
+
     const sale = new Sale({ 
       retailer,
       products,
       amount,
       coordinates,
-      addedBy: req.salesman._id 
+      addedBy: req.salesman._id,
+      valid: isValid
     });
 
     await sale.save();
-    console.log(`[CREATED SALE] Retailer:${req.body.retailer} by ${req.salesman.email} at coordinates: [${coordinates.coordinates}]`);
+    console.log(`[CREATED SALE] Retailer:${req.body.retailer} by ${req.salesman.email} at coordinates: [${coordinates.coordinates.map(coord => coord.toFixed(COORDINATE_DECIMAL_PLACES))}]`);
+    console.log(`[CREATED SALE] Distance: ${distance ? distance.toFixed(COORDINATE_DECIMAL_PLACES) + 'm' : 'N/A'}, Valid: ${isValid}`);
     res.status(201).json(sale);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -269,7 +318,8 @@ exports.getFilteredSales = async (req, res) => {
       product,
       retailer,
       startDate,
-      endDate
+      endDate,
+      valid
     } = req.query;
 
     // Build filter object
@@ -292,6 +342,11 @@ exports.getFilteredSales = async (req, res) => {
       filter[`products.${product}`] = { $exists: true };
     }
 
+    // Filter by valid status
+    if (valid !== undefined) {
+      filter.valid = valid === 'true';
+    }
+
     // Execute query with filters
     const sales = await Sale.find(filter)
       .populate('retailer')
@@ -304,7 +359,8 @@ exports.getFilteredSales = async (req, res) => {
       product,
       retailer,
       startDate,
-      endDate
+      endDate,
+      valid
     });
     console.log(`Found ${sales.length} sales matching the criteria`);
 

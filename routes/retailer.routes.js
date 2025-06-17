@@ -14,6 +14,7 @@ router.delete('/:id', auth, retailerController.deleteRetailer); // Salesman dele
 
 // Admin specific routes (require adminAuth)
 router.get('/admin/all', adminAuth, retailerController.getAllRetailers);
+router.get('/admin/filtered', adminAuth, retailerController.getFilteredRetailers);
 router.post('/admin/create', adminAuth, retailerController.adminCreateRetailer);
 router.put('/admin/:id', adminAuth, retailerController.adminUpdateRetailer);
 router.delete('/admin/:id', adminAuth, retailerController.adminDeleteRetailer);

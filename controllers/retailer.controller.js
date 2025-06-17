@@ -442,3 +442,81 @@ exports.getRetailersBySalesman = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Get filtered retailers
+exports.getFilteredRetailers = async (req, res) => {
+  try {
+    const {
+      retailerName,
+      shopName,
+      contactNo,
+      assignedSalesman,
+      active,
+      startDate,
+      endDate
+    } = req.query;
+
+    // Build filter object
+    const filter = {};
+    
+    // Text search filters
+    if (retailerName) {
+      filter.retailerName = { $regex: retailerName, $options: 'i' };
+    }
+    
+    if (shopName) {
+      filter.shopName = { $regex: shopName, $options: 'i' };
+    }
+    
+    if (contactNo) {
+      filter.$or = [
+        { contactNo: { $regex: contactNo, $options: 'i' } },
+        { contactNo2: { $regex: contactNo, $options: 'i' } }
+      ];
+    }
+
+    // Assigned salesman filter
+    if (assignedSalesman) {
+      filter.assignedSalesman = assignedSalesman;
+    }
+
+    // Active status filter
+    if (active !== undefined) {
+      filter.active = active === 'true';
+    }
+    
+    // Date range filter
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+
+    // Execute query with filters
+    const retailers = await Retailer.find(filter)
+      .select('retailerName shopName contactNo contactNo2 address location createdAt addedBy active assignedSalesman')
+      .populate('addedBy', 'name email contactNo active')
+      .populate('assignedSalesman', 'name email contactNo active')
+      .sort({ createdAt: -1 });
+
+    console.log('\n::[GET FILTERED RETAILERS]');
+    console.log('Filters applied:', {
+      retailerName,
+      shopName,
+      contactNo,
+      assignedSalesman,
+      active,
+      startDate,
+      endDate
+    });
+    console.log(`Found ${retailers.length} retailers matching the criteria`);
+
+    res.json(retailers);
+  } catch (error) {
+    console.log('::[ERROR] Get filtered retailers error:', {
+      error: error.message,
+      stack: error.stack
+    });
+    res.status(500).json({ message: error.message });
+  }
+};
