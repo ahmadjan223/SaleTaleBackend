@@ -3,6 +3,8 @@ const router = express.Router();
 const retailerController = require('../controllers/retailer.controller');
 const auth = require('../middleware/auth'); // You'll need to create this middleware
 const adminAuth = require('../middleware/adminAuth');
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
 
 // Salesman specific routes (require auth)
 router.post('/', auth, retailerController.createRetailer);
@@ -16,6 +18,7 @@ router.delete('/:id', auth, retailerController.deleteRetailer); // Salesman dele
 router.get('/admin/all', adminAuth, retailerController.getAllRetailers);
 router.get('/admin/filtered', adminAuth, retailerController.getFilteredRetailers);
 router.post('/admin/create', adminAuth, retailerController.adminCreateRetailer);
+router.post('/admin/upload-csv', adminAuth, upload.single('file'), retailerController.uploadRetailersCSV);
 router.put('/admin/:id', adminAuth, retailerController.adminUpdateRetailer);
 router.delete('/admin/:id', adminAuth, retailerController.adminDeleteRetailer);
 router.put('/admin/:id/status', adminAuth, retailerController.toggleRetailerStatus);

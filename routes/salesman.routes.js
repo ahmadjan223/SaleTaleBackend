@@ -3,6 +3,8 @@ const router = express.Router();
 const salesmanController = require('../controllers/salesman.controller');
 const auth = require('../middleware/auth'); // You'll need to create this middleware
 const adminAuth = require('../middleware/adminAuth');
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
 
 // Public routes
 router.post('/register', salesmanController.register);
@@ -28,5 +30,8 @@ router.put('/admin/:id/status', adminAuth, salesmanController.toggleSalesmanStat
 
 // Update salesman details (protected route)
 router.put('/:id', auth, salesmanController.update);
+
+// Admin specific routes
+router.post('/admin/upload-csv', adminAuth, upload.single('file'), salesmanController.uploadSalesmenCSV);
 
 module.exports = router; 

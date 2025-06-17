@@ -3,6 +3,9 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const Sale = require('../models/sale.model');
 const Retailer = require('../models/retailer.model');
+const fs = require('fs');
+const { parse } = require('csv-parse');
+const Franchise = require('../models/franchise.model');
 
 // Create a new salesman
 // exports.createSalesman = async (req, res) => {
@@ -707,6 +710,114 @@ exports.getFilteredSalesmen = async (req, res) => {
       error: error.message,
       stack: error.stack
     });
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.uploadSalesmenCSV = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const salesmen = [];
+    const errors = [];
+    let successCount = 0;
+
+    // Create a parser for the CSV file
+    const parser = fs.createReadStream(req.file.path)
+      .pipe(parse({
+        columns: true,
+        skip_empty_lines: true,
+        trim: true
+      }));
+
+    // Process each row in the CSV
+    for await (const record of parser) {
+      try {
+        // Validate required fields
+        if (!record.firstName || !record.lastName || !record.contactNo || !record.email || !record.password || !record.franchise) {
+          errors.push({
+            row: record,
+            error: 'Missing required fields'
+          });
+          continue;
+        }
+
+        // Validate contact numbers are numeric
+        if (!/^\d+$/.test(record.contactNo) || (record.contactNo2 && !/^\d+$/.test(record.contactNo2))) {
+          errors.push({
+            row: record,
+            error: 'Contact numbers must be numeric'
+          });
+          continue;
+        }
+
+        // Check if contact number or email already exists
+        const existingSalesman = await Salesman.findOne({
+          $or: [
+            { contactNo: record.contactNo },
+            { contactNo2: record.contactNo },
+            { email: record.email.toLowerCase() }
+          ]
+        });
+
+        if (existingSalesman) {
+          // Skip silently without adding to errors
+          continue;
+        }
+
+        // Verify franchise exists
+        const franchise = await Franchise.findById(record.franchise);
+        if (!franchise) {
+          errors.push({
+            row: record,
+            error: `Invalid franchise ID: ${record.franchise}`
+          });
+          continue;
+        }
+
+        // Hash the password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(record.password, salt);
+
+        // Create salesman object
+        const salesman = new Salesman({
+          firstName: record.firstName,
+          lastName: record.lastName,
+          name: `${record.firstName} ${record.lastName}`,
+          contactNo: record.contactNo,
+          contactNo2: record.contactNo2 || '',
+          email: record.email.toLowerCase(),
+          password: hashedPassword,
+          franchise: record.franchise,
+          active: true
+        });
+
+        await salesman.save();
+        successCount++;
+        salesmen.push(salesman);
+      } catch (error) {
+        errors.push({
+          row: record,
+          error: error.message
+        });
+      }
+    }
+
+    // Clean up the uploaded file
+    fs.unlinkSync(req.file.path);
+
+    res.json({
+      message: 'CSV processing completed',
+      successCount,
+      errorCount: errors.length,
+      errors: errors.length > 0 ? errors : undefined,
+      salesmen: salesmen
+    });
+
+  } catch (error) {
+    console.log('[ERROR] CSV Upload:', error.message);
     res.status(500).json({ message: error.message });
   }
 }; 

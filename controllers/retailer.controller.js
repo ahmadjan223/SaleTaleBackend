@@ -1,5 +1,8 @@
 const Retailer = require('../models/retailer.model');
 const Sale = require('../models/sale.model');
+const fs = require('fs');
+const { parse } = require('csv-parse');
+const Salesman = require('../models/salesman.model');
 
 exports.getRetailers = async (req, res) => {
   try {
@@ -517,6 +520,112 @@ exports.getFilteredRetailers = async (req, res) => {
       error: error.message,
       stack: error.stack
     });
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.uploadRetailersCSV = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const retailers = [];
+    const errors = [];
+    let successCount = 0;
+
+    // Create a parser for the CSV file
+    const parser = fs.createReadStream(req.file.path)
+      .pipe(parse({
+        columns: true,
+        skip_empty_lines: true,
+        trim: true
+      }));
+
+    // Process each row in the CSV
+    for await (const record of parser) {
+      try {
+        // Validate required fields
+        if (!record.retailerName || !record.shopName || !record.contactNo || !record.address || !record.assignedSalesman) {
+          errors.push({
+            row: record,
+            error: 'Missing required fields'
+          });
+          continue;
+        }
+
+        // Validate contact numbers are numeric
+        if (!/^\d+$/.test(record.contactNo) || (record.contactNo2 && !/^\d+$/.test(record.contactNo2))) {
+          errors.push({
+            row: record,
+            error: 'Contact numbers must be numeric'
+          });
+          continue;
+        }
+
+        // Check if contact number already exists
+        const existingRetailer = await Retailer.findOne({
+          $or: [
+            { contactNo: record.contactNo },
+            { contactNo2: record.contactNo }
+          ]
+        });
+
+        if (existingRetailer) {
+          // Skip silently without adding to errors
+          continue;
+        }
+
+        // Verify assignedSalesman exists
+        const salesman = await Salesman.findById(record.assignedSalesman);
+        if (!salesman) {
+          errors.push({
+            row: record,
+            error: `Invalid assignedSalesman ID: ${record.assignedSalesman}`
+          });
+          continue;
+        }
+
+        // Create retailer object
+        const retailer = new Retailer({
+          retailerName: record.retailerName,
+          shopName: record.shopName,
+          contactNo: record.contactNo,
+          contactNo2: record.contactNo2 || '',
+          address: record.address,
+          location: {
+            type: 'Point',
+            coordinates: [] // Empty array as default coordinates
+          },
+          assignedSalesman: record.assignedSalesman,
+          addedBy: req.admin._id,
+          active: true
+        });
+
+        await retailer.save();
+        successCount++;
+        retailers.push(retailer);
+      } catch (error) {
+        errors.push({
+          row: record,
+          error: error.message
+        });
+      }
+    }
+
+    // Clean up the uploaded file
+    fs.unlinkSync(req.file.path);
+
+    res.json({
+      message: 'CSV processing completed',
+      successCount,
+      errorCount: errors.length,
+      errors: errors.length > 0 ? errors : undefined,
+      retailers: retailers
+    });
+
+  } catch (error) {
+    console.log('[ERROR] CSV Upload:', error.message);
     res.status(500).json({ message: error.message });
   }
 };
