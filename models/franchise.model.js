@@ -6,6 +6,12 @@ const FranchiseSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  salesman: {
+    type: String,
+    required: true,
+    trim: true,
+    unique: true
+  },
   address: {
     type: String,
     required: true,
@@ -48,6 +54,12 @@ FranchiseSchema.pre('save', function(next) {
 // Add method to check if masterSimNo is available
 FranchiseSchema.statics.isMasterSimNoAvailable = async function(masterSimNo) {
   const franchise = await this.findOne({ masterSimNo });
+  return !franchise;
+};
+
+// Add method to check if salesman name is available
+FranchiseSchema.statics.isSalesmanAvailable = async function(salesman) {
+  const franchise = await this.findOne({ salesman });
   return !franchise;
 };
 
