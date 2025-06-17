@@ -715,15 +715,34 @@ exports.getFilteredSalesmen = async (req, res) => {
 };
 
 exports.uploadSalesmenCSV = async (req, res) => {
+  console.log('\n[UPLOAD SALESMEN CSV] Starting CSV upload process');
   try {
     if (!req.file) {
-      return res.status(400).json({ message: 'No file uploaded' });
+      console.log('[ERROR] No file uploaded');
+      return res.status(400).json({ 
+        success: false,
+        message: 'No file uploaded' 
+      });
+    }
+
+    console.log('[INFO] File received:', {
+      filename: req.file.filename,
+      path: req.file.path,
+      size: req.file.size
+    });
+
+    // Ensure uploads directory exists
+    const uploadsDir = 'uploads';
+    if (!fs.existsSync(uploadsDir)) {
+      console.log('[INFO] Creating uploads directory');
+      fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
     const salesmen = [];
     const errors = [];
     let successCount = 0;
 
+    console.log('[INFO] Starting CSV parsing');
     // Create a parser for the CSV file
     const parser = fs.createReadStream(req.file.path)
       .pipe(parse({
@@ -732,56 +751,98 @@ exports.uploadSalesmenCSV = async (req, res) => {
         trim: true
       }));
 
+    console.log('[INFO] Processing CSV rows');
     // Process each row in the CSV
     for await (const record of parser) {
       try {
+        console.log('[INFO] Processing row:', record);
         // Validate required fields
-        if (!record.firstName || !record.lastName || !record.contactNo || !record.email || !record.password || !record.franchise) {
+        const missingFields = [];
+        if (!record.firstName) missingFields.push('firstName');
+        if (!record.lastName) missingFields.push('lastName');
+        if (!record.contactNo) missingFields.push('contactNo');
+        if (!record.email) missingFields.push('email');
+        if (!record.password) missingFields.push('password');
+        if (!record.franchise) missingFields.push('franchise');
+
+        if (missingFields.length > 0) {
+          const error = `Missing required fields: ${missingFields.join(', ')}`;
+          console.log('[ERROR]', error);
           errors.push({
             row: record,
-            error: 'Missing required fields'
+            error: error
           });
           continue;
         }
 
         // Validate contact numbers are numeric
-        if (!/^\d+$/.test(record.contactNo) || (record.contactNo2 && !/^\d+$/.test(record.contactNo2))) {
+        if (!/^\d+$/.test(record.contactNo)) {
+          const error = `Invalid contact number format: ${record.contactNo}`;
+          console.log('[ERROR]', error);
           errors.push({
             row: record,
-            error: 'Contact numbers must be numeric'
+            error: error
           });
           continue;
         }
 
-        // Check if contact number or email already exists
+        if (record.contactNo2 && !/^\d+$/.test(record.contactNo2)) {
+          const error = `Invalid secondary contact number format: ${record.contactNo2}`;
+          console.log('[ERROR]', error);
+          errors.push({
+            row: record,
+            error: error
+          });
+          continue;
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(record.email)) {
+          const error = `Invalid email format: ${record.email}`;
+          console.log('[ERROR]', error);
+          errors.push({
+            row: record,
+            error: error
+          });
+          continue;
+        }
+
+        // Check if email or contact number already exists
+        console.log('[INFO] Checking for existing salesman with email:', record.email);
         const existingSalesman = await Salesman.findOne({
           $or: [
+            { email: record.email.toLowerCase() },
             { contactNo: record.contactNo },
-            { contactNo2: record.contactNo },
-            { email: record.email.toLowerCase() }
+            { contactNo2: record.contactNo }
           ]
         });
 
         if (existingSalesman) {
-          // Skip silently without adding to errors
-          continue;
+          console.log('[INFO] Skipping duplicate entry:', record.email);
+          continue; // Skip this record without adding to errors
         }
 
         // Verify franchise exists
+        console.log('[INFO] Verifying franchise:', record.franchise);
         const franchise = await Franchise.findById(record.franchise);
         if (!franchise) {
+          const error = `Invalid franchise ID: ${record.franchise}`;
+          console.log('[ERROR]', error);
           errors.push({
             row: record,
-            error: `Invalid franchise ID: ${record.franchise}`
+            error: error
           });
           continue;
         }
 
-        // Hash the password
+        // Hash password
+        console.log('[INFO] Hashing password for:', record.email);
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(record.password, salt);
 
         // Create salesman object
+        console.log('[INFO] Creating salesman object for:', record.email);
         const salesman = new Salesman({
           firstName: record.firstName,
           lastName: record.lastName,
@@ -794,31 +855,76 @@ exports.uploadSalesmenCSV = async (req, res) => {
           active: true
         });
 
+        console.log('[INFO] Saving salesman:', record.email);
         await salesman.save();
         successCount++;
         salesmen.push(salesman);
+        console.log('[SUCCESS] Saved salesman:', record.email);
       } catch (error) {
+        console.error('[ERROR] Error processing row:', error);
         errors.push({
           row: record,
-          error: error.message
+          error: error.message || 'Unknown error processing row'
         });
       }
     }
 
     // Clean up the uploaded file
-    fs.unlinkSync(req.file.path);
+    try {
+      console.log('[INFO] Cleaning up temporary file');
+      fs.unlinkSync(req.file.path);
+    } catch (error) {
+      console.error('[ERROR] Error deleting temporary file:', error);
+    }
 
-    res.json({
-      message: 'CSV processing completed',
+    console.log('[SUCCESS] CSV processing completed', {
       successCount,
-      errorCount: errors.length,
+      errorCount: errors.length
+    });
+
+    // Return detailed response
+    return res.json({
+      success: true,
+      message: 'CSV processing completed',
+      summary: {
+        totalProcessed: successCount + errors.length,
+        successCount,
+        errorCount: errors.length
+      },
       errors: errors.length > 0 ? errors : undefined,
-      salesmen: salesmen
+      salesmen: salesmen.map(s => ({
+        id: s._id,
+        firstName: s.firstName,
+        lastName: s.lastName,
+        email: s.email,
+        contactNo: s.contactNo
+      }))
     });
 
   } catch (error) {
-    console.log('[ERROR] CSV Upload:', error.message);
-    res.status(500).json({ message: error.message });
+    console.error('[ERROR] CSV Upload failed:', error);
+    console.error('[ERROR] Stack trace:', error.stack);
+    
+    // Clean up the uploaded file if it exists
+    if (req.file && req.file.path) {
+      try {
+        console.log('[INFO] Cleaning up file after error');
+        fs.unlinkSync(req.file.path);
+      } catch (cleanupError) {
+        console.error('[ERROR] Error cleaning up file:', cleanupError);
+      }
+    }
+
+    // Return detailed error response
+    return res.status(500).json({ 
+      success: false,
+      message: 'Error processing CSV file',
+      error: error.message,
+      details: {
+        name: error.name,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      }
+    });
   }
 }; 
 
