@@ -119,4 +119,60 @@ exports.getSalesStatistics = async (req, res) => {
     console.error('::[ERROR] Get sales statistics:', error);
     res.status(500).json({ message: error.message });
   }
+};
+
+exports.graphDataStatistics = async (req, res) => {
+  try {
+    let { startDate, endDate } = req.query;
+    const match = {};
+
+    // Find the latest sale date if needed
+    let latestDate;
+    if (!endDate || !startDate) {
+      const latestSale = await Sale.findOne({}).sort({ createdAt: -1 }).select('createdAt');
+      if (latestSale) {
+        latestDate = latestSale.createdAt;
+      }
+    }
+
+    // If no endDate, use latest sale date
+    if (!endDate && latestDate) {
+      endDate = latestDate.toISOString().slice(0, 10);
+    }
+
+    // If no startDate, use 6 days before latestDate (7 days total)
+    if (!startDate && latestDate) {
+      const start = new Date(latestDate);
+      start.setDate(start.getDate() - 6);
+      startDate = start.toISOString().slice(0, 10);
+    }
+
+    if (startDate) {
+      match.createdAt = { $gte: new Date(startDate) };
+    }
+    if (endDate) {
+      if (!match.createdAt) match.createdAt = {};
+      match.createdAt.$lte = new Date(endDate + 'T23:59:59.999Z');
+    }
+
+    const pipeline = [
+      { $match: match },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
+          },
+          totalAmount: { $sum: '$amount' }
+        }
+      },
+      { $sort: { '_id': 1 } }
+    ];
+
+    const results = await Sale.aggregate(pipeline);
+    const data = results.map(r => ({ date: r._id, totalAmount: r.totalAmount }));
+    res.json(data);
+  } catch (error) {
+    console.error('::[ERROR] Get graph data statistics:', error);
+    res.status(500).json({ message: error.message });
+  }
 }; 

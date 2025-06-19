@@ -5,5 +5,7 @@ const adminAuth = require('../middleware/adminAuth');
 
 // Sales statistics route
 router.get('/admin/statistics', adminAuth, statisticsController.getSalesStatistics);
+// Graph data statistics route
+router.get('/admin/graph-data', adminAuth, statisticsController.graphDataStatistics);
 
 module.exports = router; 
