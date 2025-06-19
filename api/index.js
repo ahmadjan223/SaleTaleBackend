@@ -19,6 +19,7 @@ const saleRoutes = require('../routes/sale.routes');
 const salesmanRoutes = require('../routes/salesman.routes');
 const adminRoutes = require('../routes/adminRoutes');
 const franchiseRoutes = require('../routes/franchise.routes');
+const statisticsRoutes = require('../routes/statistics.routes');
 
 const app = express();
 
@@ -84,6 +85,7 @@ wrapRoutes(saleRoutes);
 wrapRoutes(salesmanRoutes);
 wrapRoutes(adminRoutes);
 wrapRoutes(franchiseRoutes);
+wrapRoutes(statisticsRoutes);
 
 // Routes
 app.use('/api/retailers', retailerRoutes);
@@ -92,6 +94,7 @@ app.use('/api/sales', saleRoutes);
 app.use('/api/salesmen', salesmanRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/franchises', franchiseRoutes);
+app.use('/api/sales', statisticsRoutes);
 
 // Welcome route
 app.get('/', (req, res) => {
