@@ -14,7 +14,6 @@ exports.createFranchise = async (req, res) => {
         message: 'Master SIM number is already in use'
       });
     }
-
     const franchise = await Franchise.create({
       name,
       address,
@@ -26,6 +25,21 @@ exports.createFranchise = async (req, res) => {
       franchise
     });
   } catch (error) {
+    // Log the error for debugging
+    console.error('Create Franchise Error:', error);
+    // Handle duplicate key error (unique constraint)
+    if (error.code === 11000) {
+      let message = 'Duplicate value';
+      if (error.keyPattern && error.keyPattern.masterSimNo) {
+        message = 'Master SIM number is already in use';
+      } else if (error.keyPattern && error.keyPattern.name && error.keyPattern.masterSimNo) {
+        message = 'A franchise with this name and master SIM number already exists';
+      }
+      return res.status(400).json({
+        error: 'Duplicate Key Error',
+        message
+      });
+    }
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         error: 'Validation Error',
@@ -34,7 +48,8 @@ exports.createFranchise = async (req, res) => {
     }
     res.status(500).json({
       error: 'Server Error',
-      message: 'Error creating franchise'
+      message: 'Error creating franchise',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };

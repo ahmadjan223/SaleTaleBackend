@@ -8,9 +8,9 @@ const {
     logoutAdmin,
     updateAdminEmail,
     updateAdminPhone,
-    updateAdminPassword
+    updateAdminPassword,
+    adminUploadSalesCSV
 } = require('../controllers/adminController');
-
 // Initial admin setup (should be called only once)
 router.post('/setup', setupAdmin);
 
@@ -27,5 +27,8 @@ router.post('/logout', adminAuth, logoutAdmin);
 router.put('/update-email', adminAuth, updateAdminEmail);
 router.put('/update-phone', adminAuth, updateAdminPhone);
 router.put('/update-password', adminAuth, updateAdminPassword);
+
+// Add the route
+
 
 module.exports = router; 

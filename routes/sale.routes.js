@@ -3,6 +3,8 @@ const router = express.Router();
 const saleController = require('../controllers/sale.controller');
 const auth = require('../middleware/auth');
 const adminAuth = require('../middleware/adminAuth');
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
 
 // Salesman specific routes (require auth)
 router.post('/', auth, saleController.createSale);
@@ -18,5 +20,6 @@ router.get('/admin/filtered', adminAuth, saleController.getFilteredSales);
 router.post('/admin/create', adminAuth, saleController.adminCreateSale);
 router.delete('/admin/:id', adminAuth, saleController.adminDeleteSale);
 router.put('/admin/:id/validity', adminAuth, saleController.toggleSaleValidity);
+router.post('/admin/upload-csv', adminAuth, upload.single('file'), saleController.adminUploadSalesCSV);
 
 module.exports = router; 

@@ -3,6 +3,8 @@ const Retailer = require('../models/retailer.model');
 const Product = require('../models/product.model');
 const Salesman = require('../models/salesman.model');
 const { MAX_SALE_DISTANCE, COORDINATE_DECIMAL_PLACES } = require('../config/constants');
+const fs = require('fs');
+const { parse } = require('csv-parse');
 
 // Function to calculate distance between two coordinates in meters
 const calculateDistance = (coord1, coord2) => {
@@ -502,6 +504,97 @@ exports.adminCreateSale = async (req, res) => {
             error: error.message
         });
     }
+};
+
+// Admin upload sales via CSV
+exports.adminUploadSalesCSV = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const sales = [];
+    const errors = [];
+    let successCount = 0;
+
+    // Create a parser for the CSV file
+    const parser = fs.createReadStream(req.file.path)
+      .pipe(parse({
+        columns: true,
+        skip_empty_lines: true,
+        trim: true
+      }));
+
+    for await (const record of parser) {
+      try {
+        // Validate required fields
+        if (!record.retailer || !record.products || !record.amount || !record.coordinates || !record.addedBy) {
+          errors.push({ row: record, error: 'Missing required fields' });
+          continue;
+        }
+
+        // Parse products JSON if needed
+        let productsObj = record.products;
+        if (typeof productsObj === 'string') {
+          try {
+            productsObj = JSON.parse(productsObj);
+          } catch (e) {
+            errors.push({ row: record, error: 'Invalid products JSON' });
+            continue;
+          }
+        }
+
+        // Parse coordinates JSON if needed
+        let coordinatesObj = record.coordinates;
+        if (typeof coordinatesObj === 'string') {
+          try {
+            coordinatesObj = JSON.parse(coordinatesObj);
+          } catch (e) {
+            errors.push({ row: record, error: 'Invalid coordinates JSON' });
+            continue;
+          }
+        }
+
+        // Build sale object
+        const sale = new Sale({
+          retailer: record.retailer,
+          products: productsObj,
+          amount: record.amount,
+          coordinates: coordinatesObj,
+          addedBy: record.addedBy,
+          valid: record.valid !== undefined ? record.valid === 'true' || record.valid === true : true,
+          createdAt: record.createdAt ? new Date(record.createdAt) : new Date()
+        });
+
+        await sale.save();
+        successCount++;
+        sales.push(sale);
+      } catch (error) {
+        errors.push({ row: record, error: error.message });
+      }
+    }
+
+    // Clean up the uploaded file
+    try {
+      fs.unlinkSync(req.file.path);
+    } catch (error) {
+      // Ignore file deletion errors
+    }
+
+    res.json({
+      message: 'CSV processing completed',
+      successCount,
+      errorCount: errors.length,
+      errors: errors.length > 0 ? errors : undefined,
+      sales: sales
+    });
+  } catch (error) {
+    // Clean up the uploaded file if it exists
+    if (req.file && req.file.path) {
+      try { fs.unlinkSync(req.file.path); } catch (cleanupError) {}
+    }
+    res.status(500).json({ message: 'Error processing CSV file', error: error.message });
+  }
 };
 
 
