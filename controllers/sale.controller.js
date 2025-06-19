@@ -472,4 +472,36 @@ exports.getInvalidSales = async (req, res) => {
   }
 };
 
+exports.adminCreateSale = async (req, res) => {
+    try {
+        const { retailer, products, amount, coordinates, addedBy, valid, createdAt } = req.body;
+
+        // Create new sale with admin provided data
+        const sale = new Sale({
+            retailer,
+            products,
+            amount,
+            coordinates,
+            addedBy,
+            valid: valid !== undefined ? valid : true,
+            createdAt: createdAt || new Date()
+        });
+
+        // Save the sale
+        await sale.save();
+
+        res.status(201).json({
+            success: true,
+            message: 'Sale created successfully by admin',
+            data: sale
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: 'Error creating sale',
+            error: error.message
+        });
+    }
+};
+
 
