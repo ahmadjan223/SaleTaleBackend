@@ -20,7 +20,11 @@ const setupAdmin = async (req, res) => {
         const admin = new Admin({ email, phone, password });
         await admin.save();
 
-        const token = jwt.sign({ _id: admin._id.toString() }, process.env.JWT_SECRET || 'your-secret-key');
+        const token = jwt.sign(
+            { _id: admin._id.toString() }, 
+            process.env.JWT_SECRET || 'your-secret-key',
+            { expiresIn: '1d' }
+        );
         res.status(201).json({ admin, token });
     } catch (error) {
         res.status(400).json({ error: error.message });
@@ -53,7 +57,11 @@ const loginAdmin = async (req, res) => {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        const token = jwt.sign({ _id: admin._id.toString() }, process.env.JWT_SECRET || 'your-secret-key');
+        const token = jwt.sign(
+            { _id: admin._id.toString() }, 
+            process.env.JWT_SECRET || 'your-secret-key',
+            { expiresIn: '1d' }
+        );
         res.json({ admin, token });
     } catch (error) {
         res.status(400).json({ error: error.message });
@@ -62,7 +70,24 @@ const loginAdmin = async (req, res) => {
 
 // Get admin profile
 const getAdminProfile = async (req, res) => {
-    res.json(req.admin);
+    try {
+        // Decode the token to get expiration info
+        const token = req.token;
+        const decoded = jwt.decode(token);
+        
+        const adminData = {
+            _id: req.admin._id,
+            email: req.admin.email,
+            phone: req.admin.phone,
+            createdAt: req.admin.createdAt,
+            updatedAt: req.admin.updatedAt,
+            tokenExpiresAt: decoded.exp ? new Date(decoded.exp * 1000) : null
+        };
+        
+        res.json(adminData);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 };
 
 // Admin logout
