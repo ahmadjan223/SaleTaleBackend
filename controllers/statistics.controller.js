@@ -4,7 +4,14 @@ exports.getSalesStatistics = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
     const match = {};
-    if (startDate || endDate) {
+    if (startDate && endDate && startDate === endDate) {
+      // If both dates are the same, filter for the entire day
+      const dayStart = new Date(startDate);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(startDate);
+      dayEnd.setHours(23, 59, 59, 999);
+      match.createdAt = { $gte: dayStart, $lte: dayEnd };
+    } else if (startDate || endDate) {
       match.createdAt = {};
       if (startDate) match.createdAt.$gte = new Date(startDate);
       if (endDate) match.createdAt.$lte = new Date(endDate);
