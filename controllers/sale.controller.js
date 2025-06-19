@@ -5,6 +5,7 @@ const Salesman = require('../models/salesman.model');
 const { MAX_SALE_DISTANCE, COORDINATE_DECIMAL_PLACES } = require('../config/constants');
 const fs = require('fs');
 const { parse } = require('csv-parse');
+const Franchise = require('../models/franchise.model');
 
 // Function to calculate distance between two coordinates in meters
 const calculateDistance = (coord1, coord2) => {
@@ -594,6 +595,101 @@ exports.adminUploadSalesCSV = async (req, res) => {
       try { fs.unlinkSync(req.file.path); } catch (cleanupError) {}
     }
     res.status(500).json({ message: 'Error processing CSV file', error: error.message });
+  }
+};
+
+// Get sales statistics with franchise and product filters
+exports.getSalesStatistics = async (req, res) => {
+  try {
+    const { franchise, product, startDate, endDate } = req.query;
+    const Sale = require('../models/sale.model');
+    const Retailer = require('../models/retailer.model');
+    const Salesman = require('../models/salesman.model');
+    const Franchise = require('../models/franchise.model');
+
+    let franchiseIds = [];
+    if (franchise) {
+      // Support both id and name
+      const franchiseQuery = /^[0-9a-fA-F]{24}$/.test(franchise)
+        ? { _id: franchise }
+        : { name: { $regex: new RegExp(franchise, 'i') } };
+      const franchises = await Franchise.find(franchiseQuery).select('_id');
+      franchiseIds = franchises.map(f => f._id);
+      if (!franchiseIds.length) {
+        return res.json({ totalAmount: 0, productStats: {}, franchiseStats: {} });
+      }
+    }
+
+    // Find salesmen for the franchise(s)
+    let salesmanIds = [];
+    if (franchiseIds.length) {
+      const salesmen = await Salesman.find({ franchise: { $in: franchiseIds } }).select('_id');
+      salesmanIds = salesmen.map(s => s._id);
+      if (!salesmanIds.length) {
+        return res.json({ totalAmount: 0, productStats: {}, franchiseStats: {} });
+      }
+    }
+
+    // Build sale filter
+    const saleFilter = {};
+    if (salesmanIds.length) saleFilter.addedBy = { $in: salesmanIds };
+    if (startDate || endDate) {
+      saleFilter.createdAt = {};
+      if (startDate) saleFilter.createdAt.$gte = new Date(startDate);
+      if (endDate) saleFilter.createdAt.$lte = new Date(endDate);
+    }
+    if (product) {
+      saleFilter[`products.${product}`] = { $exists: true };
+    }
+
+    // Query sales with retailer and salesman populated
+    const sales = await Sale.find(saleFilter)
+      .populate({
+        path: 'retailer',
+        select: 'retailerName shopName assignedSalesman',
+      })
+      .populate({
+        path: 'addedBy',
+        select: 'name franchise',
+        populate: { path: 'franchise', select: 'name' }
+      })
+      .sort({ createdAt: -1 });
+
+    // Product-wise stats
+    const productStats = {};
+    sales.forEach(sale => {
+      let productsObj = sale.products;
+      let entries = [];
+      if (productsObj instanceof Map) {
+        entries = Array.from(productsObj.entries());
+      } else if (typeof productsObj === 'object' && productsObj !== null) {
+        entries = Object.entries(productsObj);
+      }
+      entries.forEach(([prod, details]) => {
+        if (!productStats[prod]) productStats[prod] = 0;
+        productStats[prod] += details.total;
+      });
+    });
+
+    // Franchise-wise stats
+    const franchiseStats = {};
+    sales.forEach(sale => {
+      const franchiseName = sale.addedBy?.franchise?.name || 'Unknown';
+      if (!franchiseStats[franchiseName]) franchiseStats[franchiseName] = 0;
+      franchiseStats[franchiseName] += sale.amount;
+    });
+
+    // Total amount
+    const totalAmount = sales.reduce((sum, sale) => sum + (sale.amount || 0), 0);
+
+    res.json({
+      totalAmount,
+      productStats,
+      franchiseStats
+    });
+  } catch (error) {
+    console.error('::[ERROR] Get sales statistics:', error);
+    res.status(500).json({ message: error.message });
   }
 };
 

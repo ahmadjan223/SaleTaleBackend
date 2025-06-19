@@ -17,6 +17,7 @@ router.delete('/:id', auth, saleController.deleteSale);
 // Admin routes (with adminAuth)
 router.get('/admin/all', adminAuth, saleController.getAllSales);
 router.get('/admin/filtered', adminAuth, saleController.getFilteredSales);
+router.get('/admin/statistics', adminAuth, saleController.getSalesStatistics);
 router.post('/admin/create', adminAuth, saleController.adminCreateSale);
 router.delete('/admin/:id', adminAuth, saleController.adminDeleteSale);
 router.put('/admin/:id/validity', adminAuth, saleController.toggleSaleValidity);
