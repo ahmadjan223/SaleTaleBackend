@@ -629,10 +629,13 @@ exports.adminUpdateSalesman = async (req, res) => {
       updateData.franchise = updateData.franchise;
     }
 
-    if (updateData.password) {
+    // Only update password if it is non-empty and not just whitespace
+    if (typeof updateData.password === 'string' && updateData.password.trim() !== '') {
       console.log(`[ADMIN UPDATE SALESMAN] New password (plain): ${updateData.password}`);
       updateData.password = await bcrypt.hash(updateData.password, 10);
       console.log(`[ADMIN UPDATE SALESMAN] New password (hashed): ${updateData.password}`);
+    } else {
+      delete updateData.password;
     }
 
     const updatedSalesman = await Salesman.findByIdAndUpdate(

@@ -32,7 +32,7 @@ exports.getAllRetailers = async (req, res) => {
     const retailers = await Retailer.find({})
       .select('retailerName shopName contactNo contactNo2 address location createdAt addedBy active assignedSalesman')
       .populate('addedBy', 'name email contactNo active')
-      .populate('assignedSalesman', 'name email contactNo active');
+      .populate('assignedSalesman', 'name email contactNo active franchise');
 
     retailers.forEach(r => {
       console.log(`[${r.retailerName}, ${r.shopName}, [${r.location.coordinates}]]`);
