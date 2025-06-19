@@ -76,9 +76,110 @@ const logoutAdmin = async (req, res) => {
     }
 };
 
+// Update admin email
+const updateAdminEmail = async (req, res) => {
+    try {
+        const { email, currentPassword } = req.body;
+        
+        if (!email || !currentPassword) {
+            return res.status(400).json({ error: 'Email and current password are required' });
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ error: 'Please provide a valid email address' });
+        }
+
+        // Verify current password
+        const isMatch = await req.admin.comparePassword(currentPassword);
+        if (!isMatch) {
+            return res.status(401).json({ error: 'Current password is incorrect' });
+        }
+
+        // Check if email already exists
+        const existingAdmin = await Admin.findOne({ email, _id: { $ne: req.admin._id } });
+        if (existingAdmin) {
+            return res.status(400).json({ error: 'Email already exists' });
+        }
+
+        // Update email
+        req.admin.email = email;
+        await req.admin.save();
+
+        res.json({ message: 'Email updated successfully', admin: req.admin });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+// Update admin phone
+const updateAdminPhone = async (req, res) => {
+    try {
+        const { phone, currentPassword } = req.body;
+        
+        if (!phone || !currentPassword) {
+            return res.status(400).json({ error: 'Phone and current password are required' });
+        }
+
+        // Verify current password
+        const isMatch = await req.admin.comparePassword(currentPassword);
+        if (!isMatch) {
+            return res.status(401).json({ error: 'Current password is incorrect' });
+        }
+
+        // Check if phone already exists
+        const existingAdmin = await Admin.findOne({ phone, _id: { $ne: req.admin._id } });
+        if (existingAdmin) {
+            return res.status(400).json({ error: 'Phone number already exists' });
+        }
+
+        // Update phone
+        req.admin.phone = phone;
+        await req.admin.save();
+
+        res.json({ message: 'Phone number updated successfully', admin: req.admin });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+// Update admin password
+const updateAdminPassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: 'Current password and new password are required' });
+        }
+
+        // Validate new password strength
+        if (newPassword.length < 6) {
+            return res.status(400).json({ error: 'New password must be at least 6 characters long' });
+        }
+
+        // Verify current password
+        const isMatch = await req.admin.comparePassword(currentPassword);
+        if (!isMatch) {
+            return res.status(401).json({ error: 'Current password is incorrect' });
+        }
+
+        // Update password
+        req.admin.password = newPassword;
+        await req.admin.save();
+
+        res.json({ message: 'Password updated successfully' });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
 module.exports = {
     setupAdmin,
     loginAdmin,
     getAdminProfile,
-    logoutAdmin
+    logoutAdmin,
+    updateAdminEmail,
+    updateAdminPhone,
+    updateAdminPassword
 }; 

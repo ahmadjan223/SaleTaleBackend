@@ -31,6 +31,9 @@ router.put('/admin/:id/status', adminAuth, salesmanController.toggleSalesmanStat
 // Update salesman details (protected route)
 router.put('/:id', auth, salesmanController.update);
 
+// Profile edit route (protected, for self-edit)
+router.post('/profile/edit', auth, salesmanController.profileEdit);
+
 // Admin specific routes
 router.post('/admin/upload-csv', adminAuth, upload.single('file'), salesmanController.uploadSalesmenCSV);
 

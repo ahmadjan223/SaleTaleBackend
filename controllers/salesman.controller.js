@@ -89,11 +89,11 @@ exports.login = async (req, res) => {
     }
 
     // First try to find by email
-    let salesman = await Salesman.findOne({ email: identifier.toLowerCase() });
+    let salesman = await Salesman.findOne({ email: identifier.toLowerCase() }).populate('franchise');
     
     // If not found by email, try contact number
     if (!salesman) {
-      salesman = await Salesman.findOne({ contactNo: identifier });
+      salesman = await Salesman.findOne({ contactNo: identifier }).populate('franchise');
     }
 
     if (!salesman) {
@@ -436,7 +436,6 @@ exports.update = async (req, res) => {
     const updateData = req.body;
 
     // Don't allow updating certain fields
-    delete updateData.password;
     delete updateData.id;
     delete updateData.email; // Email should be updated through a separate endpoint
     delete updateData.verified;
@@ -451,6 +450,32 @@ exports.update = async (req, res) => {
         });
       }
       updateData.name = `${updateData.firstName || salesman.firstName} ${updateData.lastName || salesman.lastName}`;
+    }
+
+    // If password is being updated, assign directly (let pre-save hook hash it)
+    if (updateData.password) {
+      const salesman = await Salesman.findById(id);
+      if (!salesman) {
+        return res.status(404).json({
+          success: false,
+          message: 'Salesman not found'
+        });
+      }
+      salesman.password = updateData.password;
+      // Assign other updatable fields
+      Object.keys(updateData).forEach(key => {
+        if (key !== 'password') {
+          salesman[key] = updateData[key];
+        }
+      });
+      await salesman.save();
+      const salesmanResponse = salesman.toObject();
+      delete salesmanResponse.password;
+      return res.status(200).json({
+        success: true,
+        message: 'Salesman updated successfully',
+        data: salesmanResponse
+      });
     }
 
     const updatedSalesman = await Salesman.findByIdAndUpdate(
@@ -582,7 +607,6 @@ exports.adminUpdateSalesman = async (req, res) => {
     console.log(`\n[ADMIN UPDATE SALESMAN] ID: ${id}, Update Data:`, updateData);
 
     // Don't allow updating certain fields
-    delete updateData.password;
     delete updateData.id;
     delete updateData.email; // Email should be updated through a separate endpoint
     delete updateData.verified;
@@ -603,6 +627,12 @@ exports.adminUpdateSalesman = async (req, res) => {
     // Ensure franchise is included in the update if provided
     if (updateData.franchise) {
       updateData.franchise = updateData.franchise;
+    }
+
+    if (updateData.password) {
+      console.log(`[ADMIN UPDATE SALESMAN] New password (plain): ${updateData.password}`);
+      updateData.password = await bcrypt.hash(updateData.password, 10);
+      console.log(`[ADMIN UPDATE SALESMAN] New password (hashed): ${updateData.password}`);
     }
 
     const updatedSalesman = await Salesman.findByIdAndUpdate(
@@ -836,11 +866,6 @@ exports.uploadSalesmenCSV = async (req, res) => {
           continue;
         }
 
-        // Hash password
-        console.log('[INFO] Hashing password for:', record.email);
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(record.password, salt);
-
         // Create salesman object
         console.log('[INFO] Creating salesman object for:', record.email);
         const salesman = new Salesman({
@@ -850,7 +875,7 @@ exports.uploadSalesmenCSV = async (req, res) => {
           contactNo: record.contactNo,
           contactNo2: record.contactNo2 || '',
           email: record.email.toLowerCase(),
-          password: hashedPassword,
+          password: record.password,
           franchise: record.franchise,
           active: true
         });
@@ -925,6 +950,49 @@ exports.uploadSalesmenCSV = async (req, res) => {
         stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
       }
     });
+  }
+};
+
+// Edit profile for logged-in salesman
+exports.profileEdit = async (req, res) => {
+  try {
+    const salesmanId = req.salesman._id;
+    const { email, contactNo, contactNo2, newPassword, currentPassword } = req.body;
+
+    // Find the salesman
+    const salesman = await Salesman.findById(salesmanId);
+    if (!salesman) {
+      return res.status(404).json({ success: false, message: 'Salesman not found' });
+    }
+
+    // Verify current password only for email/contact updates (not for password update)
+    if ((email || contactNo || contactNo2 !== undefined) && currentPassword) {
+      const isMatch = await bcrypt.compare(currentPassword, salesman.password);
+      if (!isMatch) {
+        return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+      }
+    }
+
+    // Update fields if provided
+    if (email && email !== salesman.email) {
+      salesman.email = email;
+    }
+    if (contactNo && contactNo !== salesman.contactNo) {
+      salesman.contactNo = contactNo;
+    }
+    if (contactNo2 !== undefined && contactNo2 !== salesman.contactNo2) {
+      salesman.contactNo2 = contactNo2;
+    }
+    if (newPassword) {
+      salesman.password = newPassword; // Do NOT hash here! Let pre-save hook handle it.
+    }
+
+    await salesman.save();
+    const updatedSalesman = await Salesman.findById(salesmanId).select('-password').populate('franchise');
+    res.json({ success: true, message: 'Profile updated successfully', data: updatedSalesman });
+  } catch (error) {
+    console.error('Profile edit error:', error);
+    res.status(500).json({ success: false, message: 'Error updating profile', error: error.message });
   }
 }; 
 
