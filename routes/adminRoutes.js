@@ -9,7 +9,8 @@ const {
     updateAdminEmail,
     updateAdminPhone,
     updateAdminPassword,
-    adminUploadSalesCSV
+    adminUploadSalesCSV,
+    validateAdminPassword
 } = require('../controllers/adminController');
 // Initial admin setup (should be called only once)
 router.post('/setup', setupAdmin);
@@ -27,6 +28,9 @@ router.post('/logout', adminAuth, logoutAdmin);
 router.put('/update-email', adminAuth, updateAdminEmail);
 router.put('/update-phone', adminAuth, updateAdminPhone);
 router.put('/update-password', adminAuth, updateAdminPassword);
+
+// Validate admin password
+router.post('/validate-password', adminAuth, validateAdminPassword);
 
 // Add the route
 

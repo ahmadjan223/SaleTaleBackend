@@ -199,6 +199,23 @@ const updateAdminPassword = async (req, res) => {
     }
 };
 
+// Validate admin password
+const validateAdminPassword = async (req, res) => {
+    try {
+        const { password } = req.body;
+        if (!password) {
+            return res.status(400).json({ error: 'Password is required' });
+        }
+        const isMatch = await req.admin.comparePassword(password);
+        if (!isMatch) {
+            return res.status(401).json({ error: 'Invalid password' });
+        }
+        res.json({ message: 'Password is valid' });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
 module.exports = {
     setupAdmin,
     loginAdmin,
@@ -206,5 +223,6 @@ module.exports = {
     logoutAdmin,
     updateAdminEmail,
     updateAdminPhone,
-    updateAdminPassword
+    updateAdminPassword,
+    validateAdminPassword
 }; 

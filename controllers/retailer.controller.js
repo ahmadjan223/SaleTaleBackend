@@ -338,10 +338,11 @@ exports.adminCreateRetailer = async (req, res) => {
 
     // Check for missing required fields
     if (!retailerName || !shopName || !contactNo || !address || !location || !location.coordinates || !assignedSalesman) {
-      console.log('[ERROR] Missing required fields');
+      console.log('[ERROR] Missing or invalid required fields');
       return res.status(400).json({
-        message: 'Missing required fields',
-        required: ['retailerName', 'shopName', 'contactNo', 'address', 'location (with coordinates)', 'assignedSalesman']
+        success: false,
+        message: 'Missing or invalid required fields',
+        required: ['retailerName', 'shopName', 'contactNo', 'address', 'location (with 2 coordinates)', 'assignedSalesman']
       });
     }
 
@@ -362,10 +363,14 @@ exports.adminCreateRetailer = async (req, res) => {
 
     console.log(`[ADMIN] Created retailer: [${retailer.retailerName}, ${retailer.shopName}, ${retailer.contactNo}, ${retailer.address}, [${retailer.location.coordinates}], Added by Admin: ${req.admin._id}, Assigned to salesman ID: ${assignedSalesman}]`);
 
-    res.status(201).json(retailer);
+    res.status(201).json({
+      success: true,
+      message: 'Retailer created successfully',
+      data: retailer
+    });
   } catch (error) {
     console.log('[ERROR]', error.message);
-    res.status(400).json({ message: error.message });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
