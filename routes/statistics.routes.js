@@ -9,3 +9,5 @@ router.get('/admin/statistics', adminAuth, statisticsController.getSalesStatisti
 router.get('/admin/graph-data', adminAuth, statisticsController.graphDataStatistics);
 
 module.exports = router; 
+
+

@@ -317,6 +317,7 @@ exports.adminDeleteSale = async (req, res) => {
 exports.getFilteredSales = async (req, res) => {
   try {
     const {
+      id,
       salesman,
       product,
       retailer,
@@ -324,6 +325,17 @@ exports.getFilteredSales = async (req, res) => {
       endDate,
       valid
     } = req.query;
+
+    // If id is provided, return only that sale and ignore other filters
+    if (id) {
+      const sale = await Sale.findById(id)
+        .populate('retailer')
+        .populate('addedBy', '_id name email contactNo contactNo2 verified');
+      if (!sale) {
+        return res.status(404).json({ message: 'Sale not found' });
+      }
+      return res.json([sale]); // Return as array for consistency
+    }
 
     // Build filter object
     const filter = {};
