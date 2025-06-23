@@ -39,9 +39,10 @@ exports.getSalesStatistics = async (req, res) => {
         }
       },
       { $unwind: '$franchise' },
-      // Convert products map to array
+      // Convert products map to array and add sale ID
       {
         $project: {
+          _id: 1,
           amount: 1,
           franchiseName: '$franchise.name',
           productsArray: { $objectToArray: '$products' }
@@ -53,57 +54,81 @@ exports.getSalesStatistics = async (req, res) => {
         $group: {
           _id: {
             product: '$productsArray.k',
-            franchise: '$franchiseName'
+            franchise: '$franchiseName',
+            saleId: '$_id'
           },
           productQuantity: { $sum: '$productsArray.v.quantity' },
           productSales: { $sum: '$productsArray.v.total' },
           franchiseSales: { $sum: '$amount' }
         }
       },
+      // Group by product and franchise to get counts
+      {
+        $group: {
+          _id: {
+            product: '$_id.product',
+            franchise: '$_id.franchise'
+          },
+          productQuantity: { $sum: '$productQuantity' },
+          productSales: { $sum: '$productSales' },
+          franchiseSales: { $first: '$franchiseSales' },
+          count: { $count: {} }  // Count unique sales containing this product
+        }
+      },
       // Group for franchise-wise stats
       {
         $group: {
           _id: '$_id.franchise',
-          totalSaleAmount: { $sum: '$franchiseSales' },
+          totalSaleAmount: { $first: '$franchiseSales' },
           productwiseSales: {
             $push: {
               product: '$_id.product',
               quantity: '$productQuantity',
-              salesAmount: '$productSales'
-            }
-          }
-        }
-      },
-      // Group for global stats
-      {
-        $group: {
-          _id: null,
-          totalAmount: { $sum: '$totalSaleAmount' },
-          franchises: {
-            $push: {
-              franchise: '$_id',
-              totalSaleAmount: '$totalSaleAmount',
-              productwiseSales: '$productwiseSales'
+              salesAmount: '$productSales',
+              count: '$count'
             }
           }
         }
       }
     ];
 
-    // For global product stats
+    // For global product stats and total sales count
     const productPipeline = [
       { $match: match },
       {
-        $project: {
-          productsArray: { $objectToArray: '$products' }
-        }
-      },
-      { $unwind: '$productsArray' },
-      {
-        $group: {
-          _id: '$productsArray.k',
-          quantity: { $sum: '$productsArray.v.quantity' },
-          salesAmount: { $sum: '$productsArray.v.total' }
+        $facet: {
+          products: [
+            {
+              $project: {
+                _id: 1,
+                productsArray: { $objectToArray: '$products' }
+              }
+            },
+            { $unwind: '$productsArray' },
+            {
+              $group: {
+                _id: {
+                  product: '$productsArray.k',
+                  saleId: '$_id'
+                },
+                quantity: { $sum: '$productsArray.v.quantity' },
+                salesAmount: { $sum: '$productsArray.v.total' }
+              }
+            },
+            {
+              $group: {
+                _id: '$_id.product',
+                quantity: { $sum: '$quantity' },
+                salesAmount: { $sum: '$salesAmount' },
+                count: { $count: {} }  // Count unique sales containing this product
+              }
+            }
+          ],
+          totalCount: [
+            {
+              $count: 'count'  // Count total unique sales
+            }
+          ]
         }
       }
     ];
@@ -113,13 +138,57 @@ exports.getSalesStatistics = async (req, res) => {
       Sale.aggregate(productPipeline)
     ]);
 
+    // Calculate franchise total counts
+    const franchiseCounts = await Sale.aggregate([
+      { $match: match },
+      {
+        $lookup: {
+          from: 'salesmen',
+          localField: 'addedBy',
+          foreignField: '_id',
+          as: 'salesman'
+        }
+      },
+      { $unwind: '$salesman' },
+      {
+        $lookup: {
+          from: 'franchises',
+          localField: 'salesman.franchise',
+          foreignField: '_id',
+          as: 'franchise'
+        }
+      },
+      { $unwind: '$franchise' },
+      {
+        $group: {
+          _id: '$franchise.name',
+          count: { $count: {} }
+        }
+      }
+    ]);
+
+    const franchiseCountMap = franchiseCounts.reduce((acc, f) => {
+      acc[f._id] = f.count;
+      return acc;
+    }, {});
+
     const response = {
-      totalAmount: mainStats[0]?.totalAmount || 0,
-      products: productStats.reduce((acc, p) => {
-        acc[p._id] = { quantity: p.quantity, salesAmount: p.salesAmount };
+      totalAmount: mainStats.reduce((sum, f) => sum + f.totalSaleAmount, 0),
+      totalCount: productStats[0]?.totalCount[0]?.count || 0,
+      products: productStats[0]?.products.reduce((acc, p) => {
+        acc[p._id] = {
+          quantity: p.quantity,
+          salesAmount: p.salesAmount,
+          count: p.count
+        };
         return acc;
       }, {}),
-      franchises: mainStats[0]?.franchises || []
+      franchises: mainStats.map(f => ({
+        franchise: f._id,
+        totalSaleAmount: f.totalSaleAmount,
+        totalCount: franchiseCountMap[f._id] || 0,
+        productwiseSales: f.productwiseSales
+      }))
     };
     res.json(response);
   } catch (error) {
@@ -169,14 +238,19 @@ exports.graphDataStatistics = async (req, res) => {
           _id: {
             $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
           },
-          totalAmount: { $sum: '$amount' }
+          totalAmount: { $sum: '$amount' },
+          count: { $sum: 1 }
         }
       },
       { $sort: { '_id': 1 } }
     ];
 
     const results = await Sale.aggregate(pipeline);
-    const data = results.map(r => ({ date: r._id, totalAmount: r.totalAmount }));
+    const data = results.map(r => ({ 
+      date: r._id, 
+      totalAmount: r.totalAmount,
+      count: r.count 
+    }));
     res.json(data);
   } catch (error) {
     console.error('::[ERROR] Get graph data statistics:', error);
