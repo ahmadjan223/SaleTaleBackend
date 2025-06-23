@@ -5,9 +5,13 @@ const auth = require('../middleware/auth');
 const adminAuth = require('../middleware/adminAuth');
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
+const statisticsController = require('../controllers/statistics.controller');
+
+// Salesman statistics route (must be before any :id route)
+router.get('/statistics', auth, statisticsController.getSalesmanStatistics);
 
 // Salesman specific routes (require auth)
-router.post('/', auth, saleController.createSale);
+router.post('/', auth, saleController.createSale);  
 router.get('/', auth, saleController.getSales);
 router.get('/retailer/:retailerId', auth, saleController.getRetailerSales);
 router.get('/:id', auth, saleController.getSale);

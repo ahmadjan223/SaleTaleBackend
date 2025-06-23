@@ -91,7 +91,23 @@ exports.createSale = async (req, res) => {
 
 exports.getSales = async (req, res) => {
   try {
-    const sales = await Sale.find({ addedBy: req.salesman._id })
+    const { startDate, endDate } = req.query;
+    const filter = { addedBy: req.salesman._id };
+
+    if (startDate && endDate && startDate === endDate) {
+      // If both dates are the same, filter for the entire day
+      const dayStart = new Date(startDate);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(startDate);
+      dayEnd.setHours(23, 59, 59, 999);
+      filter.createdAt = { $gte: dayStart, $lte: dayEnd };
+    } else if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+
+    const sales = await Sale.find(filter)
       .select('retailer products amount coordinates addedBy valid createdAt')
       .populate('retailer')
       .populate('addedBy', '_id name email contactNo contactNo2 active')
@@ -160,7 +176,23 @@ exports.getAllSales = async (req, res) => {
 
 exports.getRetailerSales = async (req, res) => {
   try {
-    const sales = await Sale.find({ retailer: req.params.retailerId, addedBy: req.salesman._id })
+    const { startDate, endDate } = req.query;
+    const filter = { retailer: req.params.retailerId, addedBy: req.salesman._id };
+
+    if (startDate && endDate && startDate === endDate) {
+      // If both dates are the same, filter for the entire day
+      const dayStart = new Date(startDate);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(startDate);
+      dayEnd.setHours(23, 59, 59, 999);
+      filter.createdAt = { $gte: dayStart, $lte: dayEnd };
+    } else if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+
+    const sales = await Sale.find(filter)
       .select('retailer products amount coordinates addedBy valid createdAt')
       .populate('addedBy', '_id name email contactNo contactNo2 active')
       .sort({ createdAt: -1 });

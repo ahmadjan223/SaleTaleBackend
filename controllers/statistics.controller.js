@@ -256,4 +256,72 @@ exports.graphDataStatistics = async (req, res) => {
     console.error('::[ERROR] Get graph data statistics:', error);
     res.status(500).json({ message: error.message });
   }
+};
+
+exports.getSalesmanStatistics = async (req, res) => {
+  try {
+    const { startDate, endDate, retailerId } = req.query;
+    const match = { addedBy: req.salesman._id };
+    if (retailerId) {
+      match.retailer = retailerId;
+    }
+    if (startDate && endDate && startDate === endDate) {
+      const dayStart = new Date(startDate);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(startDate);
+      dayEnd.setHours(23, 59, 59, 999);
+      match.createdAt = { $gte: dayStart, $lte: dayEnd };
+    } else if (startDate || endDate) {
+      match.createdAt = {};
+      if (startDate) match.createdAt.$gte = new Date(startDate);
+      if (endDate) match.createdAt.$lte = new Date(endDate);
+    }
+
+    // Product-wise stats and total sales count/amount (no retailer breakdown)
+    const productPipeline = [
+      { $match: match },
+      { $project: {
+          amount: 1,
+          productsArray: { $objectToArray: '$products' }
+        }
+      },
+      { $unwind: '$productsArray' },
+      { $group: {
+          _id: '$productsArray.k',
+          quantity: { $sum: '$productsArray.v.quantity' },
+          salesAmount: { $sum: '$productsArray.v.total' },
+          count: { $sum: 1 }
+        }
+      }
+    ];
+
+    const productStats = await Sale.aggregate(productPipeline);
+
+    // Total sales amount and count
+    const totalStats = await Sale.aggregate([
+      { $match: match },
+      { $group: {
+          _id: null,
+          totalAmount: { $sum: '$amount' },
+          totalCount: { $sum: 1 }
+        }
+      }
+    ]);
+
+    res.json({
+      totalAmount: totalStats[0]?.totalAmount || 0,
+      totalCount: totalStats[0]?.totalCount || 0,
+      products: productStats.reduce((acc, p) => {
+        acc[p._id] = {
+          quantity: p.quantity,
+          salesAmount: p.salesAmount,
+          count: p.count
+        };
+        return acc;
+      }, {})
+    });
+  } catch (error) {
+    console.error('::[ERROR] Get salesman statistics:', error);
+    res.status(500).json({ message: error.message });
+  }
 }; 
