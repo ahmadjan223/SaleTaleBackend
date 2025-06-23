@@ -505,7 +505,7 @@ exports.update = async (req, res) => {
     console.error('Update error:', error);
     res.status(500).json({
       success: false,
-      message: 'Error updating salesman',
+      message: 'Error updating salesman check form values',
       error: error.message
     });
   }
@@ -592,7 +592,7 @@ exports.adminCreateSalesman = async (req, res) => {
     });
     res.status(500).json({
       success: false,
-      message: 'Error creating salesman',
+      message: 'Error creating salesman check form values',
       error: error.message,
       validationErrors: error.errors
     });
@@ -663,7 +663,7 @@ exports.adminUpdateSalesman = async (req, res) => {
     console.error('[ERROR] Admin update salesman error:', error);
     res.status(500).json({
       success: false,
-      message: 'Error updating salesman',
+      message: 'Error updating salesman check form value',
       error: error.message
     });
   }
