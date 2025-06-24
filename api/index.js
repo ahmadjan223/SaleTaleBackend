@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
-console.log('\n>>> API server started');
+console.log('\n>>> API server started v0.0.1');
 
 // Log environment variables (excluding sensitive ones)
 console.log('Environment check:', {
