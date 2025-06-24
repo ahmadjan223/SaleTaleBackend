@@ -265,6 +265,7 @@ exports.getSalesmanStatistics = async (req, res) => {
     if (retailerId) {
       match.retailer = retailerId;
     }
+    // If both dates are provided and equal, treat as full day
     if (startDate && endDate && startDate === endDate) {
       const dayStart = new Date(startDate);
       dayStart.setHours(0, 0, 0, 0);
