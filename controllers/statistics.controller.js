@@ -236,51 +236,40 @@ exports.getSalesStatistics = async (req, res) => {
 exports.graphDataStatistics = async (req, res) => {
   try {
     let { startDate, endDate } = req.query;
-    const match = {};
-
-    if (startDate && endDate) {
-      match.createdAt = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate),
-      };
-    } else {
-      // Find the latest sale date if needed
-      let latestDate;
+    if (!startDate || !endDate) {
+      // Default: last 7 days, 24h windows
       const latestSale = await Sale.findOne({}).sort({ createdAt: -1 }).select('createdAt');
-      if (latestSale) {
-        latestDate = latestSale.createdAt;
-      }
-      
-      const end = latestDate ? new Date(latestDate) : new Date();
+      const end = latestSale ? new Date(latestSale.createdAt) : new Date();
       const start = new Date(end);
       start.setDate(start.getDate() - 6);
-
-      match.createdAt = { $gte: start, $lte: end };
+      startDate = start.toISOString();
+      endDate = end.toISOString();
     }
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    // Fetch all sales in the range
+    const sales = await Sale.find({
+      createdAt: { $gte: start, $lte: end }
+    }).select('amount createdAt');
 
-    console.log('Filtering sales with createdAt:', match.createdAt);
-
-    const pipeline = [
-      { $match: match },
-      {
-        $group: {
-          _id: {
-            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
-          },
-          totalAmount: { $sum: '$amount' },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { '_id': 1 } }
-    ];
-
-    const results = await Sale.aggregate(pipeline);
-    const data = results.map(r => ({ 
-      date: r._id, 
-      totalAmount: r.totalAmount,
-      count: r.count 
+    // Calculate number of 24h windows
+    const MS_PER_WINDOW = 24 * 60 * 60 * 1000;
+    const numWindows = Math.ceil((end - start) / MS_PER_WINDOW);
+    // Prepare window buckets
+    const windows = Array.from({ length: numWindows }, (_, i) => ({
+      date: new Date(start.getTime() + i * MS_PER_WINDOW).toISOString(),
+      totalAmount: 0,
+      count: 0
     }));
-    res.json(data);
+    // Aggregate sales into windows
+    sales.forEach(sale => {
+      const idx = Math.floor((new Date(sale.createdAt) - start) / MS_PER_WINDOW);
+      if (idx >= 0 && idx < windows.length) {
+        windows[idx].totalAmount += sale.amount;
+        windows[idx].count += 1;
+      }
+    });
+    res.json(windows);
   } catch (error) {
     console.error('::[ERROR] Get graph data statistics:', error);
     res.status(500).json({ message: error.message });
