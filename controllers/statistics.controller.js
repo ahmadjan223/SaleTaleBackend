@@ -271,28 +271,21 @@ exports.graphDataStatistics = async (req, res) => {
 exports.getSalesmanStatistics = async (req, res) => {
   try {
     const { startDate, endDate, retailerId } = req.query;
+
+    if (!req.salesman || !req.salesman._id) {
+      return res.status(401).json({ message: 'Unauthorized: Salesman not found.' });
+    }
+
     const match = { addedBy: req.salesman._id };
     if (retailerId) {
       match.retailer = retailerId;
     }
     
     if (startDate && endDate) {
-      if (startDate === endDate) {
-        // If both dates are the same, add 24 hours to endDate
-        const start = new Date(startDate + 'T00:00:00.000Z');
-        const end = new Date(startDate + 'T23:59:59.999Z');
-        console.log("date duration", start, "-", end);
-        match.createdAt = { $gte: start, $lte: end };
-      } else {
-        // Different dates
-        match.createdAt = {};
-        if (startDate) match.createdAt.$gte = new Date(startDate + 'T00:00:00.000Z');
-        if (endDate) match.createdAt.$lte = new Date(endDate);
-      }
-    } else if (startDate || endDate) {
-      match.createdAt = {};
-      if (startDate) match.createdAt.$gte = new Date(startDate + 'T00:00:00.000Z');
-      if (endDate) match.createdAt.$lte = new Date(endDate);
+      match.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
     }
 
     console.log('Filtering sales with createdAt:', match.createdAt);

@@ -118,7 +118,7 @@ exports.getSales = async (req, res) => {
         .map(([productId, details]) => `${productId}: ${details.quantity} units @ $${details.price} each`)
         .join(', ');
       
-      console.log(`[SALE] Products: ${productDetails}, Total Amount: ${sale.amount}, Coordinates: [${sale.coordinates?.coordinates}]`);
+      // console.log(`[SALE] Products: ${productDetails}, Total Amount: ${sale.amount}, Coordinates: [${sale.coordinates?.coordinates}]`);
     });
 
     res.json(sales);
@@ -202,7 +202,7 @@ exports.getRetailerSales = async (req, res) => {
         .map(([productId, details]) => `${productId}: ${details.quantity} units @ $${details.price} each`)
         .join(', ');
       
-      console.log(`[SALE] Products: ${productDetails}, Total Amount: ${sale.amount}, Coordinates: [${sale.coordinates?.coordinates}]`);
+      // console.log(`[SALE] Products: ${productDetails}, Total Amount: ${sale.amount}, Coordinates: [${sale.coordinates?.coordinates}]`);
     });
 
     res.json(sales);

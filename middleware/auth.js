@@ -12,7 +12,7 @@ const auth = async (req, res, next) => {
 
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    console.log('Decoded Token:', decoded);  // Add a log to check the token content
+    // console.log('Decoded Token:', decoded);  // Add a log to check the token content
     
     // Find salesman by _id from token
     const salesman = await Salesman.findById(decoded._id);
