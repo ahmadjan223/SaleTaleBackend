@@ -16,7 +16,7 @@ const auth = async (req, res, next) => {
     
     // Find salesman by _id from token
     const salesman = await Salesman.findById(decoded._id);
-    console.log('Salesman found:', salesman);  // Log the found salesman to ensure it is correct
+    // console.log('Salesman found:', salesman);  // Log the found salesman to ensure it is correct
     
     if (!salesman) {
       return res.status(401).json({ message: 'Token is not valid' });

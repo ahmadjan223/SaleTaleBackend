@@ -6,21 +6,10 @@ exports.getSalesStatistics = async (req, res) => {
     const match = {};
     
     if (startDate && endDate) {
-      if (startDate === endDate) {
-        // If both dates are the same, add 24 hours to endDate
-        const start = new Date(startDate + 'T00:00:00.000Z');
-        const end = new Date(startDate + 'T23:59:59.999Z');
-        match.createdAt = { $gte: start, $lte: end };
-      } else {
-        // Different dates
-        match.createdAt = {};
-        if (startDate) match.createdAt.$gte = new Date(startDate + 'T00:00:00.000Z');
-        if (endDate) match.createdAt.$lte = new Date(endDate);
-      }
-    } else if (startDate || endDate) {
-      match.createdAt = {};
-      if (startDate) match.createdAt.$gte = new Date(startDate + 'T00:00:00.000Z');
-      if (endDate) match.createdAt.$lte = new Date(endDate);
+      match.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
     }
 
     console.log('Filtering sales with createdAt:', match.createdAt);
@@ -210,33 +199,24 @@ exports.graphDataStatistics = async (req, res) => {
     let { startDate, endDate } = req.query;
     const match = {};
 
-    // Find the latest sale date if needed
-    let latestDate;
-    if (!endDate || !startDate) {
+    if (startDate && endDate) {
+      match.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
+    } else {
+      // Find the latest sale date if needed
+      let latestDate;
       const latestSale = await Sale.findOne({}).sort({ createdAt: -1 }).select('createdAt');
       if (latestSale) {
         latestDate = latestSale.createdAt;
       }
-    }
+      
+      const end = latestDate ? new Date(latestDate) : new Date();
+      const start = new Date(end);
+      start.setDate(start.getDate() - 6);
 
-    // If no endDate, use latest sale date
-    if (!endDate && latestDate) {
-      endDate = latestDate.toISOString().slice(0, 10);
-    }
-
-    // If no startDate, use 6 days before latestDate (7 days total)
-    if (!startDate && latestDate) {
-      const start = new Date(latestDate);
-      start.setUTCDate(start.getUTCDate() - 6);
-      startDate = start.toISOString().slice(0, 10);
-    }
-
-    if (startDate) {
-      match.createdAt = { $gte: new Date(startDate + 'T00:00:00.000Z') };
-    }
-    if (endDate) {
-      if (!match.createdAt) match.createdAt = {};
-      match.createdAt.$lte = new Date(endDate + 'T23:59:59.999Z');
+      match.createdAt = { $gte: start, $lte: end };
     }
 
     console.log('Filtering sales with createdAt:', match.createdAt);
@@ -271,11 +251,6 @@ exports.graphDataStatistics = async (req, res) => {
 exports.getSalesmanStatistics = async (req, res) => {
   try {
     const { startDate, endDate, retailerId } = req.query;
-
-    if (!req.salesman || !req.salesman._id) {
-      return res.status(401).json({ message: 'Unauthorized: Salesman not found.' });
-    }
-
     const match = { addedBy: req.salesman._id };
     if (retailerId) {
       match.retailer = retailerId;
