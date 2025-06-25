@@ -12,8 +12,42 @@ exports.getSalesStatistics = async (req, res) => {
       };
     }
 
-    console.log('Filtering sales with createdAt:', match.createdAt);
+    // --- Franchise total sales aggregation ---
+    const franchiseTotalsPromise = Sale.aggregate([
+      { $match: match },
+      {
+        $lookup: {
+          from: 'salesmen',
+          localField: 'addedBy',
+          foreignField: '_id',
+          as: 'salesman'
+        }
+      },
+      { $unwind: '$salesman' },
+      {
+        $lookup: {
+          from: 'franchises',
+          localField: 'salesman.franchise',
+          foreignField: '_id',
+          as: 'franchise'
+        }
+      },
+      { $unwind: '$franchise' },
+      {
+        $group: {
+          _id: '$franchise.name',
+          totalSaleAmount: { $sum: '$amount' }
+        }
+      }
+    ]);
 
+    // --- Global total sales aggregation ---
+    const globalTotalPromise = Sale.aggregate([
+      { $match: match },
+      { $group: { _id: null, totalAmount: { $sum: '$amount' } } }
+    ]);
+
+    // --- Product-wise and franchise-wise stats (without totalSaleAmount) ---
     const pipeline = [
       { $match: match },
       // Join with Salesman
@@ -40,7 +74,6 @@ exports.getSalesStatistics = async (req, res) => {
       {
         $project: {
           _id: 1,
-          amount: 1,
           franchiseName: '$franchise.name',
           productsArray: { $objectToArray: '$products' }
         }
@@ -55,8 +88,7 @@ exports.getSalesStatistics = async (req, res) => {
             saleId: '$_id'
           },
           productQuantity: { $sum: '$productsArray.v.quantity' },
-          productSales: { $sum: '$productsArray.v.total' },
-          franchiseSales: { $sum: '$amount' }
+          productSales: { $sum: '$productsArray.v.total' }
         }
       },
       // Group by product and franchise to get counts
@@ -68,7 +100,6 @@ exports.getSalesStatistics = async (req, res) => {
           },
           productQuantity: { $sum: '$productQuantity' },
           productSales: { $sum: '$productSales' },
-          franchiseSales: { $first: '$franchiseSales' },
           count: { $count: {} }  // Count unique sales containing this product
         }
       },
@@ -76,7 +107,6 @@ exports.getSalesStatistics = async (req, res) => {
       {
         $group: {
           _id: '$_id.franchise',
-          totalSaleAmount: { $first: '$franchiseSales' },
           productwiseSales: {
             $push: {
               product: '$_id.product',
@@ -130,13 +160,8 @@ exports.getSalesStatistics = async (req, res) => {
       }
     ];
 
-    const [mainStats, productStats] = await Promise.all([
-      Sale.aggregate(pipeline),
-      Sale.aggregate(productPipeline)
-    ]);
-
     // Calculate franchise total counts
-    const franchiseCounts = await Sale.aggregate([
+    const franchiseCountsPromise = Sale.aggregate([
       { $match: match },
       {
         $lookup: {
@@ -164,13 +189,27 @@ exports.getSalesStatistics = async (req, res) => {
       }
     ]);
 
+    // Run all in parallel
+    const [mainStats, productStats, franchiseCounts, franchiseTotals, globalTotal] = await Promise.all([
+      Sale.aggregate(pipeline),
+      Sale.aggregate(productPipeline),
+      franchiseCountsPromise,
+      franchiseTotalsPromise,
+      globalTotalPromise
+    ]);
+
     const franchiseCountMap = franchiseCounts.reduce((acc, f) => {
       acc[f._id] = f.count;
       return acc;
     }, {});
 
+    const franchiseTotalMap = franchiseTotals.reduce((acc, f) => {
+      acc[f._id] = f.totalSaleAmount;
+      return acc;
+    }, {});
+
     const response = {
-      totalAmount: mainStats.reduce((sum, f) => sum + f.totalSaleAmount, 0),
+      totalAmount: globalTotal[0]?.totalAmount || 0,
       totalCount: productStats[0]?.totalCount[0]?.count || 0,
       products: productStats[0]?.products.reduce((acc, p) => {
         acc[p._id] = {
@@ -182,7 +221,7 @@ exports.getSalesStatistics = async (req, res) => {
       }, {}),
       franchises: mainStats.map(f => ({
         franchise: f._id,
-        totalSaleAmount: f.totalSaleAmount,
+        totalSaleAmount: franchiseTotalMap[f._id] || 0,
         totalCount: franchiseCountMap[f._id] || 0,
         productwiseSales: f.productwiseSales
       }))
