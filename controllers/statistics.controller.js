@@ -4,18 +4,26 @@ exports.getSalesStatistics = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
     const match = {};
-    if (startDate && endDate && startDate === endDate) {
-      // If both dates are the same, filter for the entire day
-      const dayStart = new Date(startDate);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(startDate);
-      dayEnd.setHours(23, 59, 59, 999);
-      match.createdAt = { $gte: dayStart, $lte: dayEnd };
+    
+    if (startDate && endDate) {
+      if (startDate === endDate) {
+        // If both dates are the same, add 24 hours to endDate
+        const start = new Date(startDate + 'T00:00:00.000Z');
+        const end = new Date(startDate + 'T23:59:59.999Z');
+        match.createdAt = { $gte: start, $lte: end };
+      } else {
+        // Different dates
+        match.createdAt = {};
+        if (startDate) match.createdAt.$gte = new Date(startDate + 'T00:00:00.000Z');
+        if (endDate) match.createdAt.$lte = new Date(endDate);
+      }
     } else if (startDate || endDate) {
       match.createdAt = {};
-      if (startDate) match.createdAt.$gte = new Date(startDate);
+      if (startDate) match.createdAt.$gte = new Date(startDate + 'T00:00:00.000Z');
       if (endDate) match.createdAt.$lte = new Date(endDate);
     }
+
+    console.log('Filtering sales with createdAt:', match.createdAt);
 
     const pipeline = [
       { $match: match },
@@ -219,17 +227,19 @@ exports.graphDataStatistics = async (req, res) => {
     // If no startDate, use 6 days before latestDate (7 days total)
     if (!startDate && latestDate) {
       const start = new Date(latestDate);
-      start.setDate(start.getDate() - 6);
+      start.setUTCDate(start.getUTCDate() - 6);
       startDate = start.toISOString().slice(0, 10);
     }
 
     if (startDate) {
-      match.createdAt = { $gte: new Date(startDate) };
+      match.createdAt = { $gte: new Date(startDate + 'T00:00:00.000Z') };
     }
     if (endDate) {
       if (!match.createdAt) match.createdAt = {};
       match.createdAt.$lte = new Date(endDate + 'T23:59:59.999Z');
     }
+
+    console.log('Filtering sales with createdAt:', match.createdAt);
 
     const pipeline = [
       { $match: match },
@@ -265,18 +275,27 @@ exports.getSalesmanStatistics = async (req, res) => {
     if (retailerId) {
       match.retailer = retailerId;
     }
-    // If both dates are provided and equal, treat as full day
-    if (startDate && endDate && startDate === endDate) {
-      const dayStart = new Date(startDate);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(startDate);
-      dayEnd.setHours(23, 59, 59, 999);
-      match.createdAt = { $gte: dayStart, $lte: dayEnd };
+    
+    if (startDate && endDate) {
+      if (startDate === endDate) {
+        // If both dates are the same, add 24 hours to endDate
+        const start = new Date(startDate + 'T00:00:00.000Z');
+        const end = new Date(startDate + 'T23:59:59.999Z');
+        console.log("date duration", start, "-", end);
+        match.createdAt = { $gte: start, $lte: end };
+      } else {
+        // Different dates
+        match.createdAt = {};
+        if (startDate) match.createdAt.$gte = new Date(startDate + 'T00:00:00.000Z');
+        if (endDate) match.createdAt.$lte = new Date(endDate);
+      }
     } else if (startDate || endDate) {
       match.createdAt = {};
-      if (startDate) match.createdAt.$gte = new Date(startDate);
+      if (startDate) match.createdAt.$gte = new Date(startDate + 'T00:00:00.000Z');
       if (endDate) match.createdAt.$lte = new Date(endDate);
     }
+
+    console.log('Filtering sales with createdAt:', match.createdAt);
 
     // Product-wise stats and total sales count/amount (no retailer breakdown)
     const productPipeline = [

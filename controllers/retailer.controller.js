@@ -494,11 +494,16 @@ exports.getFilteredRetailers = async (req, res) => {
     }
     
     // Date range filter
-    if (startDate || endDate) {
+    if (startDate && endDate && startDate === endDate) {
+      const start = new Date(startDate + 'T00:00:00.000Z');
+      const end = new Date(startDate + 'T23:59:59.999Z');
+      filter.createdAt = { $gte: start, $lte: end };
+    } else if (startDate || endDate) {
       filter.createdAt = {};
       if (startDate) filter.createdAt.$gte = new Date(startDate);
       if (endDate) filter.createdAt.$lte = new Date(endDate);
     }
+    console.log('Filtering retailers with createdAt:', filter.createdAt);
 
     // Execute query with filters
     const retailers = await Retailer.find(filter)

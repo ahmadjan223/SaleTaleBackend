@@ -95,17 +95,16 @@ exports.getSales = async (req, res) => {
     const filter = { addedBy: req.salesman._id };
 
     if (startDate && endDate && startDate === endDate) {
-      // If both dates are the same, filter for the entire day
-      const dayStart = new Date(startDate);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(startDate);
-      dayEnd.setHours(23, 59, 59, 999);
-      filter.createdAt = { $gte: dayStart, $lte: dayEnd };
+      // If both dates are the same, add 24 hours to endDate
+      const start = new Date(startDate + 'T00:00:00.000Z');
+      const end = new Date(startDate + 'T23:59:59.999Z');
+      filter.createdAt = { $gte: start, $lte: end };
     } else if (startDate || endDate) {
       filter.createdAt = {};
       if (startDate) filter.createdAt.$gte = new Date(startDate);
       if (endDate) filter.createdAt.$lte = new Date(endDate);
     }
+    console.log('Filtering sales with createdAt:', filter.createdAt);
 
     const sales = await Sale.find(filter)
       .select('retailer products amount coordinates addedBy valid createdAt')
@@ -373,11 +372,17 @@ exports.getFilteredSales = async (req, res) => {
     const filter = {};
     
     // Date range filter
-    if (startDate || endDate) {
+    if (startDate && endDate && startDate === endDate) {
+      // If both dates are the same, add 24 hours to endDate
+      const start = new Date(startDate + 'T00:00:00.000Z');
+      const end = new Date(startDate + 'T23:59:59.999Z');
+      filter.createdAt = { $gte: start, $lte: end };
+    } else if (startDate || endDate) {
       filter.createdAt = {};
       if (startDate) filter.createdAt.$gte = new Date(startDate);
       if (endDate) filter.createdAt.$lte = new Date(endDate);
     }
+    console.log('Filtering sales with createdAt:', filter.createdAt);
 
     // Filter by IDs
     if (retailer) filter.retailer = retailer;
